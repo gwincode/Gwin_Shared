@@ -22,6 +22,12 @@ Central shared repository for AI coding tool configuration: instructions, script
 - Note which tools an item supports (Claude Code, Cursor, Copilot, Codex, …) at the top of its file.
 - Scripts should ship both PowerShell (`.ps1`) and POSIX (`.sh`) versions where practical.
 
+## Share it: one-shot install
+
+To set up someone else's project (shared rules and the agent pipeline in one pass), give them
+[`INSTALL-PROMPT.md`](INSTALL-PROMPT.md). They paste the part between its two lines into Claude Code in their
+project. They need read access to this repo first.
+
 ## Shared rules in a project: `gwinrules`
 
 Run this inside each project to copy the rules into that project's own repo, so local sessions, cloud
