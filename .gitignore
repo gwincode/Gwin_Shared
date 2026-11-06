@@ -1,0 +1,20 @@
+# Secrets and local overrides
+.env
+.env.*
+*.local.*
+*.local.json
+secrets/
+*.pem
+*.key
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Tool caches
+node_modules/
+__pycache__/
+*.pyc
+.venv/
