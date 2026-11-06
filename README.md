@@ -6,7 +6,7 @@ Central shared repository for AI coding tool configuration: instructions, script
 
 | Folder | What goes here |
 | --- | --- |
-| [`instructions/`](instructions/) | Shared rules and prompts (global coding standards, per-tool instruction files such as `CLAUDE.md`, `AGENTS.md`, `.cursorrules`, `copilot-instructions.md`). |
+| [`instructions/`](instructions/) | The shared rules every project follows ([`RULES.md`](instructions/RULES.md) is the index). Installed into projects with `gwinrules`. |
 | [`skills/`](skills/) | Agent skills — one folder per skill, each with a `SKILL.md`. |
 | [`plugins/`](plugins/) | Plugins (e.g. Claude Code plugins with `.claude-plugin/plugin.json`). |
 | [`hooks/`](hooks/) | Hook scripts and example `settings.json` hook snippets. |
@@ -22,7 +22,32 @@ Central shared repository for AI coding tool configuration: instructions, script
 - Note which tools an item supports (Claude Code, Cursor, Copilot, Codex, …) at the top of its file.
 - Scripts should ship both PowerShell (`.ps1`) and POSIX (`.sh`) versions where practical.
 
-## Using it
+## Shared rules in a project: `gwinrules`
+
+Run this inside each project to copy the rules into that project's own repo, so local sessions, cloud
+sessions and other machines all read the same thing:
+
+```powershell
+cd C:\code\MyProject
+C:\code\Gwin_Shared\scripts\gwinrules.ps1          # preview
+C:\code\Gwin_Shared\scripts\gwinrules.ps1 -Apply   # write
+```
+
+```bash
+/path/to/Gwin_Shared/scripts/gwinrules.sh [--project DIR] [--apply] [--force] [--uninstall]
+```
+
+It copies `instructions/*.md` into `<project>/.claude/gwin-shared/`, stamping each copy with the
+Gwin_Shared commit and a content hash, and adds one marked block to the project's `CLAUDE.md` that imports
+`.claude/gwin-shared/RULES.md`. It previews until you pass `-Apply`, never commits, and leaves hand-edited
+copies alone unless you pass `-Force`. Commit the result in the project. Re-run it after the rules change.
+
+Edit rules here, never in a project's copy. A project overrides a shared rule only by saying so explicitly in
+its own `CLAUDE.md`. Pipeline agents (`po`, `code`, `qa`, `reviewer`) come from
+[gwin-claude-agent-pipeline-kit](https://github.com/gwincode/gwin-claude-agent-pipeline-kit), installed and
+committed per project.
+
+## Personal extras on this machine: `install`
 
 Clone once, then run the installer to link `skills/`, `agents/` and `commands/` into Claude Code (default target `~/.claude`). Because items are linked, a `git pull` updates them everywhere.
 
