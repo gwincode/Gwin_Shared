@@ -7,6 +7,8 @@
 #      each stamped with its source file, the Gwin_Shared commit and a content hash.
 #   2. Adds one marked block to <project>/CLAUDE.md importing .claude/gwin-shared/RULES.md
 #      (creating CLAUDE.md if there is none). Nothing else in CLAUDE.md is touched.
+# If the folder is not a git repo, or the repo has no GitHub remote, it warns that the rules will work
+# only on this computer: Claude cloud sessions read the project from GitHub.
 # It only previews by default; pass --apply to write. It never commits or pushes.
 # Hand-edited copies and files it didn't create are left alone unless --force is given.
 #
@@ -25,7 +27,7 @@ while [ $# -gt 0 ]; do
     --apply) APPLY=1; shift ;;
     --force) FORCE=1; shift ;;
     --uninstall) UNINSTALL=1; shift ;;
-    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -39,9 +41,31 @@ is_stamped() { stamp_of "$1" | grep -Eq "$STAMP_RE"; }
 
 REPO=$(cd "$(dirname "$0")/.." && pwd -P)
 SRC="$REPO/instructions"
-ROOT=$(git -C "$PROJECT" rev-parse --show-toplevel 2>/dev/null) || { echo "Not inside a git repository: $PROJECT" >&2; exit 1; }
+[ -d "$PROJECT" ] || { echo "Folder not found: $PROJECT" >&2; exit 1; }
+IS_GIT=1
+ROOT=$(git -C "$PROJECT" rev-parse --show-toplevel 2>/dev/null) || { IS_GIT=0; ROOT=$PROJECT; }
 ROOT=$(cd "$ROOT" && pwd -P)
 [ "$ROOT" != "$REPO" ] || { echo "That is the Gwin_Shared repo itself; run this inside a project." >&2; exit 1; }
+if [ "$IS_GIT" = 0 ] && { [ "$ROOT" = "$(cd ~ && pwd -P)" ] || [ "$ROOT" = / ] || [ "$(dirname "$ROOT")" = "$ROOT" ]; }; then
+  echo "Refusing to install into $ROOT (your home folder or a drive root). Run this inside a project folder." >&2; exit 1
+fi
+
+HAS_GITHUB=0
+[ "$IS_GIT" = 1 ] && git -C "$ROOT" remote -v 2>/dev/null | grep -Eq 'github\.com[:/]' && HAS_GITHUB=1
+LOCAL_ONLY=""
+if [ "$IS_GIT" = 0 ]; then
+  LOCAL_ONLY='This folder is not a git repository.
+  The rules will work only in this folder, on this computer.
+  Claude cloud sessions and other computers will not see them.
+  To share them: make the folder a git repo, add a GitHub remote, then commit and push.'
+elif [ "$HAS_GITHUB" = 0 ]; then
+  LOCAL_ONLY='This repo has no GitHub remote.
+  The rules will work only in copies of this repo on computers you set up yourself.
+  Claude cloud sessions need the project on GitHub, so they will not see the rules.
+  To share them: add a GitHub remote (git remote add origin <url>), then commit and push.'
+fi
+local_only_warning() { [ -z "$LOCAL_ONLY" ] || printf 'WARNING: LOCAL ONLY\n  %s\n' "$LOCAL_ONLY" >&2; }
+local_only_warning
 
 COMMIT=$(git -C "$REPO" rev-parse --short HEAD 2>/dev/null || echo unknown)
 SOURCE="gwincode/Gwin_Shared@$COMMIT"
@@ -173,6 +197,7 @@ fi
 
 # --- Apply -------------------------------------------------------------------------------------
 echo
+local_only_warning
 if [ "$N" = 0 ]; then echo "Nothing to change."; exit 0; fi
 if [ "$APPLY" = 0 ]; then echo "Preview only: $N change(s). Re-run with --apply to write them."; exit 0; fi
 
@@ -183,4 +208,7 @@ while IFS="$tab" read -r kind target staged; do
 done < "$ACTIONS"
 [ "$UNINSTALL" = 0 ] || rmdir "$DEST" 2>/dev/null || true
 echo "Wrote $N change(s). Nothing was committed."
-echo "Review with: git -C \"$ROOT\" status"
+if [ "$IS_GIT" = 1 ]; then
+  echo "Review with: git -C \"$ROOT\" status"
+  [ "$HAS_GITHUB" = 0 ] || echo "Commit and push the changes so that cloud sessions and other computers get them."
+fi

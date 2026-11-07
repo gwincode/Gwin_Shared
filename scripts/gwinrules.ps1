@@ -11,6 +11,9 @@
     2. Adds one marked block to <project>/CLAUDE.md that imports .claude/gwin-shared/RULES.md
        (creating CLAUDE.md if there is none). Nothing else in CLAUDE.md is touched.
 
+  If the folder is not a git repo, or the repo has no GitHub remote, it warns that the rules will work
+  only on this computer: Claude cloud sessions read the project from GitHub.
+
   It only previews by default; pass -Apply to write. It never commits or pushes: review the changes
   and commit them in the project like any other change. Re-run it to update the copies.
 
@@ -81,10 +84,35 @@ function Invoke-Git([string]$Dir, [string[]]$GitArgs) {
 $Repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $Src  = Join-Path $Repo 'instructions'
 
-$root = Invoke-Git $Project @('rev-parse', '--show-toplevel')
-if (-not $root) { throw "Not inside a git repository: $Project" }
-$ProjectRoot = (Resolve-Path $root).Path
+if (-not (Test-Path -LiteralPath $Project -PathType Container)) { throw "Folder not found: $Project" }
+$root  = Invoke-Git $Project @('rev-parse', '--show-toplevel')
+$IsGit = [bool]$root
+$ProjectRoot = if ($IsGit) { (Resolve-Path $root).Path } else { (Resolve-Path $Project).Path }
 if ($ProjectRoot -eq $Repo) { throw 'That is the Gwin_Shared repo itself; run this inside a project.' }
+$homeDir = (Resolve-Path $HOME).Path
+if (-not $IsGit -and ($ProjectRoot -eq $homeDir -or $ProjectRoot -eq [System.IO.Path]::GetPathRoot($ProjectRoot))) {
+    throw "Refusing to install into $ProjectRoot (your home folder or a drive root). Run this inside a project folder."
+}
+
+$remotes   = if ($IsGit) { Invoke-Git $ProjectRoot @('remote', '-v') } else { $null }
+$HasGitHub = [bool]($remotes -and ($remotes -match 'github\.com[:/]'))
+$LocalOnly = $null
+if (-not $IsGit) {
+    $LocalOnly = @(
+        'This folder is not a git repository.',
+        'The rules will work only in this folder, on this computer.',
+        'Claude cloud sessions and other computers will not see them.',
+        'To share them: make the folder a git repo, add a GitHub remote, then commit and push.'
+    ) -join "`n  "
+} elseif (-not $HasGitHub) {
+    $LocalOnly = @(
+        'This repo has no GitHub remote.',
+        'The rules will work only in copies of this repo on computers you set up yourself.',
+        'Claude cloud sessions need the project on GitHub, so they will not see the rules.',
+        'To share them: add a GitHub remote (git remote add origin <url>), then commit and push.'
+    ) -join "`n  "
+}
+if ($LocalOnly) { Write-Warning "LOCAL ONLY`n  $LocalOnly" }
 
 $commit = Invoke-Git $Repo @('rev-parse', '--short', 'HEAD')
 if (-not $commit) { $commit = 'unknown' }
@@ -208,6 +236,7 @@ if ($null -ne $newText) {
 # --- Apply -------------------------------------------------------------------------------------
 
 Write-Host ''
+if ($LocalOnly) { Write-Warning "LOCAL ONLY`n  $LocalOnly" }
 if (-not $actions.Count) { Write-Host 'Nothing to change.'; return }
 if (-not $Apply) { Write-Host "Preview only: $($actions.Count) change(s). Re-run with -Apply to write them."; return }
 
@@ -220,4 +249,7 @@ if ($Uninstall -and (Test-Path -LiteralPath $Dest) -and -not (Get-ChildItem -Lit
     Remove-Item -LiteralPath $Dest -Force
 }
 Write-Host "Wrote $($actions.Count) change(s). Nothing was committed."
-Write-Host "Review with: git -C `"$ProjectRoot`" status"
+if ($IsGit) {
+    Write-Host "Review with: git -C `"$ProjectRoot`" status"
+    if ($HasGitHub) { Write-Host 'Commit and push the changes so that cloud sessions and other computers get them.' }
+}

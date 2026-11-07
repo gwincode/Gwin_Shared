@@ -48,6 +48,10 @@ Gwin_Shared commit and a content hash, and adds one marked block to the project'
 `.claude/gwin-shared/RULES.md`. It previews until you pass `-Apply`, never commits, and leaves hand-edited
 copies alone unless you pass `-Force`. Commit the result in the project. Re-run it after the rules change.
 
+If the folder is not a git repo, or the repo has no GitHub remote, it warns **LOCAL ONLY**: the rules then
+work only on this computer, because Claude cloud sessions and other computers get them from GitHub. It
+refuses to install into your home folder or a drive root.
+
 Edit rules here, never in a project's copy. A project overrides a shared rule only by saying so explicitly in
 its own `CLAUDE.md`. Pipeline agents (`po`, `code`, `qa`, `reviewer`) come from
 [gwin-claude-agent-pipeline-kit](https://github.com/gwincode/gwin-claude-agent-pipeline-kit), installed and

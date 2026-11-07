@@ -22,9 +22,11 @@ instruction per sentence, active voice. Keep code, commands and file names exact
 - Do not run `/feature`, `/discover`, `/promote` or any subagent. Installing is copying files.
 - Keep `Gwin_Shared` and the kit outside this repo's tracked files, except where a step says otherwise.
 
-**1. Check the repo.** Confirm this folder is the root of a git repo (`git rev-parse --show-toplevel`). Run
-`git status`. If there are uncommitted changes, list them and ask whether to continue. Note the GitHub
-remote and the branches (`git remote -v`, `git branch -r`).
+**1. Check the repo.** Confirm this folder is the root of a git repo (`git rev-parse --show-toplevel`) and
+that it has a GitHub remote (`git remote -v`). If it is not a git repo, or it has no GitHub remote, stop and
+tell me: the rules and agents will then work only on this computer, because Claude cloud sessions and other
+computers get them from GitHub. Ask whether to continue anyway. Run `git status`. If there are uncommitted
+changes, list them and ask whether to continue. Note the branches (`git branch -r`).
 
 **2. Get the sources.** Use the folder that contains this repo as the parent (for example `C:\code` or
 `~/code`).
