@@ -9,8 +9,8 @@
   docs, web search, a connector. Never from memory, and never by restating an old doc as current.
 - Report test results with the runner's verbatim per-suite pass/fail counts. Never estimate them or restate
   them from memory.
-- One CI trigger per commit. Read a red run; don't re-run it to see whether it passes. A flaky-looking failure
-  counts as a failure.
+- One CI trigger per commit. Read a red run; run it again ONE time; don't re-run it more than once to see
+- whether it passes. A flaky-looking failure counts as a failure.
 - Right after a deploy, a mixed result is usually the CDN serving two versions. Wait 60–90 seconds and check
   again before reporting.
 - In UI checks, measure the element that can overflow, not a container that hides its overflow. A CSS class
