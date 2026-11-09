@@ -7,9 +7,9 @@ Named `HANDOFF.md` to match what `gwinrules --check` looks for.
 ## Current state
 
 - **Branch:** `claude/confident-davinci-yzlj39`, cut from `main` at `8b8ccff` (PR #4 and PR #5 are merged).
-- **PR:** the status line step for `INSTALL-PROMPT.md` (step 6c), opened as a draft against `main` in this session. PR #4 (ASCII loader, status line install, `--loader`) and PR #5 (handoff update) are merged.
+- **PR:** [gwincode/Gwin_Shared#6](https://github.com/gwincode/Gwin_Shared/pull/6), the status line step for `INSTALL-PROMPT.md` (step 6c), a draft against `main`. PR #4 (ASCII loader, status line install, `--loader`) and PR #5 (handoff update) are merged.
 - **Next change:** none queued. A merged PR is finished, so any follow-up work starts from the latest `main` on a fresh branch.
-- **Session:** `GS status line in INSTALL-PROMPT`
+- **Session:** `v0.4.5 / PR #6 — token status line in INSTALL-PROMPT`
 - **Also cloned (read-only, shallow):** `gwincode/gwin-claude-agent-pipeline-kit` at `/home/user/gwincode/gwin-claude-agent-pipeline-kit` (HEAD `2201746`, `main`). This session cannot push to it. Nothing has been changed there.
 
 ## What's in the repo
