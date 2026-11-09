@@ -13,6 +13,10 @@
   without them the script copies the file and says so. Copies do not update on `git pull`;
   refresh them with -Force (which also replaces any other item with the same name).
 
+  Also installs the token status line (plugins/cc-token-statusline, MIT, Alfafis) into the personal
+  ~/.claude only. It backs up settings.json and chains onto any status line already set. Skip it with
+  -NoStatusline. With -Target it is skipped, because a status line is a personal setting.
+
 .PARAMETER Target
   Config folder to install into. Default: ~/.claude
 
@@ -23,7 +27,11 @@
   Replace existing items that are not links into this repo.
 
 .PARAMETER Uninstall
-  Remove links (and copies with matching names) that this script installed.
+  Remove links (and copies with matching names) that this script installed. Also removes the
+  token status line and restores the status line that was there before.
+
+.PARAMETER NoStatusline
+  Do not install the token status line.
 
 .EXAMPLE
   ./scripts/install.ps1 -WhatIf
@@ -35,7 +43,8 @@ param(
     [string]$Target = (Join-Path $HOME '.claude'),
     [switch]$Copy,
     [switch]$Force,
-    [switch]$Uninstall
+    [switch]$Uninstall,
+    [switch]$NoStatusline
 )
 
 $ErrorActionPreference = 'Stop'
@@ -130,5 +139,37 @@ foreach ($set in $sets) {
     foreach ($i in $items) {
         $dest = Join-Path $dstRoot $i.Name
         if ($Uninstall) { Uninstall-Item $i.FullName $dest } else { Install-Item $i.FullName $dest $set.Dirs }
+    }
+}
+
+# Token status line: the plugin's own installer does the work (copy, backup, chain, uninstall).
+$StatuslineScript = Join-Path $Repo 'plugins\cc-token-statusline\scripts\install.py'
+$PersonalTarget   = Join-Path $HOME '.claude'
+if ($NoStatusline) {
+    Write-Host 'statusline: skipped (-NoStatusline)'
+} elseif ($Target -ne $PersonalTarget) {
+    Write-Host 'statusline: skipped (only the personal ~/.claude gets a status line, not -Target)'
+} else {
+    # Prefer the py launcher: a bare "python" can be a Microsoft Store stub that prints an ad.
+    $PyExe = $null; $PyPre = @()
+    if (Get-Command py -ErrorAction SilentlyContinue) { $PyExe = 'py'; $PyPre = @('-3') }
+    elseif (Get-Command python -ErrorAction SilentlyContinue) { $PyExe = 'python' }
+
+    if (-not $PyExe) {
+        Write-Warning 'statusline: skipped (Python 3 not found; the badge needs it)'
+    } else {
+        $PyArgs = @($PyPre) + @($StatuslineScript)
+        if ($Uninstall) { $PyArgs += '--uninstall' }
+        elseif ($WhatIfPreference) { $PyArgs += '--dry-run' }
+
+        Write-Host 'statusline:'
+        $PrevConfigDir = $env:CLAUDE_CONFIG_DIR
+        $env:CLAUDE_CONFIG_DIR = $Target   # the plugin's installer reads this
+        try {
+            & $PyExe @PyArgs
+            if ($LASTEXITCODE -ne 0) { Write-Warning 'statusline: installer failed (links above are unaffected)' }
+        } finally {
+            $env:CLAUDE_CONFIG_DIR = $PrevConfigDir
+        }
     }
 }

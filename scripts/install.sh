@@ -8,12 +8,16 @@
 # README.md files are ignored. Existing items that are not links into this repo are left alone
 # unless --force is given. Copies (--copy) do not update on `git pull`; refresh them with --force.
 #
-# Usage: scripts/install.sh [--target DIR] [--copy] [--force] [--uninstall] [--dry-run]
+# Also installs the token status line (plugins/cc-token-statusline, MIT, Alfafis) into the personal
+# ~/.claude only. It backs up settings.json and chains onto any status line already set. Skip it with
+# --no-statusline. With --target it is skipped, because a status line is a personal setting.
+#
+# Usage: scripts/install.sh [--target DIR] [--copy] [--force] [--uninstall] [--dry-run] [--no-statusline]
 set -eu
 
 REPO=$(cd "$(dirname "$0")/.." && pwd -P)
 TARGET="$HOME/.claude"
-COPY=0 FORCE=0 UNINSTALL=0 DRY=0
+COPY=0 FORCE=0 UNINSTALL=0 DRY=0 STATUSLINE=1
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -22,7 +26,8 @@ while [ $# -gt 0 ]; do
     --force) FORCE=1; shift ;;
     --uninstall) UNINSTALL=1; shift ;;
     --dry-run) DRY=1; shift ;;
-    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
+    --no-statusline) STATUSLINE=0; shift ;;
+    -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
     *) echo "unknown option: $1" >&2; exit 2 ;;
   esac
 done
@@ -83,3 +88,32 @@ for set in skills agents commands; do
   done
   [ "$found" = 1 ] || echo "$set: nothing to do"
 done
+
+# Token status line: the plugin's own installer does the work (copy, backup, chain, uninstall).
+STATUSLINE_DIR="$REPO/plugins/cc-token-statusline"
+if [ "$STATUSLINE" = 0 ]; then
+  echo "statusline: skipped (--no-statusline)"
+elif [ "$TARGET" != "$HOME/.claude" ]; then
+  echo "statusline: skipped (only the personal ~/.claude gets a status line, not --target)"
+else
+  py=""
+  for candidate in python3 python; do
+    if command -v "$candidate" >/dev/null 2>&1; then py=$candidate; break; fi
+  done
+  if [ -z "$py" ]; then
+    echo "statusline: skipped (python3 not found; the badge needs it)" >&2
+  else
+    echo "statusline:"
+    # The plugin's installer reads CLAUDE_CONFIG_DIR, so point it at the same folder as the links.
+    if [ "$DRY" = 1 ]; then flag=--dry-run
+    elif [ "$UNINSTALL" = 1 ]; then flag=--uninstall
+    else flag=; fi
+    if [ -n "$flag" ]; then
+      CLAUDE_CONFIG_DIR="$TARGET" "$py" "$STATUSLINE_DIR/scripts/install.py" "$flag" \
+        || echo "statusline: installer failed (links above are unaffected)" >&2
+    else
+      CLAUDE_CONFIG_DIR="$TARGET" "$py" "$STATUSLINE_DIR/scripts/install.py" \
+        || echo "statusline: installer failed (links above are unaffected)" >&2
+    fi
+  fi
+fi
