@@ -64,7 +64,9 @@ Wait for my answer. Ask again only if an answer contradicts another.
 block that step 5 added to `CLAUDE.md` stays where it is. Append the pipeline block after the gwin-shared:end marker.
 
 **6b. Make every rule able to fire.** The shared rules are instructions. A rule fires only when Claude loads
-it and the files, branches and tools it names exist. Run these checks. Show a diff for each FIX and write it
+it and the files, branches and tools it names exist. First run `gwinrules --check` (`-Check` in PowerShell)
+from `<parent>/Gwin_Shared/scripts/`. It does the read-only checks below and exits 1 if one is not PASS.
+Use its output, and do by hand only what it cannot check. Run these checks. Show a diff for each FIX and write it
 only on my yes. Run the checks again after step 6 and list the result in the step 7 report.
 - **Loaded.** `.claude/gwin-shared/` is not in `.gitignore` and is not ignored by git
   (`git check-ignore -v .claude/gwin-shared/RULES.md`). If it is ignored, FIX: propose the exact

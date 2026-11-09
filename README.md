@@ -62,6 +62,11 @@ If the folder is not a git repo, or the repo has no GitHub remote, it warns **LO
 work only on this computer, because Claude cloud sessions and other computers get them from GitHub. It
 refuses to install into your home folder or a drive root.
 
+Check that every rule can fire with `gwinrules --check` (`-Check` in PowerShell). It writes nothing. It reports
+PASS, FIX, BLOCKED or ASK for each thing the rules depend on: copies loaded and committed, a staging branch and
+its protection, `HANDOFF.md`, `.env` protection, release notes, `gh`, and model pins. It exits 1 if anything is
+not PASS. `--staging NAME` sets the staging branch name.
+
 Edit rules here, never in a project's copy. A project overrides a shared rule only by saying so explicitly in
 its own `CLAUDE.md`. Pipeline agents (`po`, `code`, `qa`, `reviewer`) come from
 [gwin-claude-agent-pipeline-kit](https://github.com/gwincode/gwin-claude-agent-pipeline-kit), installed and

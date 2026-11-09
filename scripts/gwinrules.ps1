@@ -20,6 +20,10 @@
   A copy that was edited by hand, or a file in .claude/gwin-shared/ it didn't create, is left alone
   unless -Force is given.
 
+  -Check writes nothing. It reports whether every rule can fire (rules loaded and committed, staging
+  branch, HANDOFF.md, secrets setup, release notes, gh, model pins) as PASS, FIX, BLOCKED or ASK, and
+  exits 1 if anything is not PASS.
+
 .PARAMETER Project
   Path inside the project repo. Default: the current directory.
 
@@ -32,6 +36,12 @@
 .PARAMETER Uninstall
   Remove the copies and the CLAUDE.md block instead of installing.
 
+.PARAMETER Check
+  Check that every rule can fire. Read-only. Exit code 1 if any check is not PASS.
+
+.PARAMETER Staging
+  Name of the staging branch for -Check. Default: staging.
+
 .EXAMPLE
   cd C:\code\MyProject; C:\code\Gwin_Shared\scripts\gwinrules.ps1
   C:\code\Gwin_Shared\scripts\gwinrules.ps1 -Project C:\code\MyProject -Apply
@@ -41,7 +51,9 @@ param(
     [string]$Project = (Get-Location).Path,
     [switch]$Apply,
     [switch]$Force,
-    [switch]$Uninstall
+    [switch]$Uninstall,
+    [switch]$Check,
+    [string]$Staging = 'staging'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -113,6 +125,148 @@ if (-not $IsGit) {
     ) -join "`n  "
 }
 if ($LocalOnly) { Write-Warning "LOCAL ONLY`n  $LocalOnly" }
+
+# --- -Check: can every rule fire? (read-only) --------------------------------------------------
+
+if ($Check) {
+    $script:Bad = 0
+    function Add-Result([string]$Status, [string]$Name, [string]$Detail) {
+        Write-Host ('  {0,-8} {1}' -f $Status, $Name)
+        if ($Detail) { Write-Host "           $Detail" }
+        if ($Status -ne 'PASS' -and $Status -ne 'INFO') { $script:Bad++ }
+    }
+    function Test-Cmd([string]$Name) { [bool](Get-Command $Name -ErrorAction SilentlyContinue) }
+    function Test-Git([string[]]$GitArgs) { & git -C $ProjectRoot @GitArgs 2>$null | Out-Null; $LASTEXITCODE -eq 0 }
+
+    $cd = Join-Path $ProjectRoot $DestRel
+    $prod = 'main'
+    if ($IsGit) {
+        $d = Invoke-Git $ProjectRoot @('symbolic-ref', '--short', 'refs/remotes/origin/HEAD')
+        if ($d) { $prod = $d -replace '^origin/', '' }
+    }
+    Write-Host "Rule checks for $ProjectRoot (staging branch: $Staging, production branch: $prod)"
+    Write-Host ''
+
+    # Loaded (all rules)
+    $missing = @(); $stale = @(); $ignored = @(); $untracked = @()
+    foreach ($f in (Get-ChildItem -LiteralPath $Src -File -Filter '*.md' | Where-Object { $_.Name -ne 'README.md' } | Sort-Object Name)) {
+        $name = $f.Name
+        $path = Join-Path $cd $name
+        if (-not (Test-Path -LiteralPath $path)) { $missing += $name; continue }
+        $h = Get-ShortHash (Normalize (Read-Text $f.FullName))
+        $cur = Split-Stamped (Read-Text $path)
+        if (-not $cur.Stamp -or $cur.Stamp.Groups[3].Value -ne $h -or (Get-ShortHash $cur.Body) -ne $h) { $stale += $name }
+        if ($IsGit) {
+            if (Test-Git @('check-ignore', '-q', "$DestRel/$name")) { $ignored += $name }
+            if (-not (Test-Git @('ls-files', '--error-unmatch', "$DestRel/$name"))) { $untracked += $name }
+        }
+    }
+    if ($missing) { Add-Result 'FIX' "rules: all rule files are in $DestRel" ("missing: $($missing -join ' '). Run gwinrules -Apply.") }
+    elseif ($stale) { Add-Result 'FIX' 'rules: copies match Gwin_Shared' ("stale or edited: $($stale -join ' '). Run gwinrules -Apply.") }
+    else { Add-Result 'PASS' "rules: all rule files are in $DestRel and match Gwin_Shared" '' }
+    if ($ignored) { Add-Result 'FIX' 'rules: not ignored by git' ("ignored: $($ignored -join ' '). Remove or negate the .gitignore line.") }
+    elseif ($IsGit -and -not $missing) { Add-Result 'PASS' 'rules: not ignored by git' '' }
+    if (-not $IsGit) { Add-Result 'BLOCKED' 'rules: committed so cloud sessions can read them' 'Not a git repo.' }
+    elseif ($untracked -and -not $missing) { Add-Result 'FIX' 'rules: committed' ("not tracked by git: $($untracked -join ' '). Commit and push them.") }
+    elseif (-not $missing) { Add-Result 'PASS' 'rules: committed' '' }
+    if (-not $HasGitHub) { Add-Result 'BLOCKED' 'rules: project has a GitHub remote' 'Cloud sessions read the project from GitHub.' }
+    else { Add-Result 'PASS' 'rules: project has a GitHub remote' '' }
+    $cm = Join-Path $ProjectRoot 'CLAUDE.md'
+    if ((Test-Path -LiteralPath $cm) -and ((Read-Text $cm).Contains($StartMark)) -and ((Read-Text $cm).Contains("@$DestRel/RULES.md"))) { Add-Result 'PASS' 'rules: CLAUDE.md imports RULES.md' '' }
+    else { Add-Result 'FIX' 'rules: CLAUDE.md imports RULES.md' 'Run gwinrules -Apply.' }
+    Add-Result 'INFO' 'rules: loaded in a session' 'Start a new session and run /memory. All 12 rule files must show.'
+
+    # Staging and protection (rules 02, 07)
+    if ($IsGit) {
+        $n = "branches: $Staging exists on origin (rules 02, 07)"
+        if (Test-Git @('show-ref', '--verify', '-q', "refs/remotes/origin/$Staging")) { Add-Result 'PASS' $n '' }
+        elseif (Test-Git @('show-ref', '--verify', '-q', "refs/heads/$Staging")) { Add-Result 'BLOCKED' $n 'It exists only on this computer. Push it.' }
+        else { Add-Result 'BLOCKED' $n "Create it from $prod, push it, protect it. If you just created it, run git fetch." }
+    }
+    $ghOk = $HasGitHub -and (Test-Cmd 'gh')
+    if ($ghOk) { & gh auth status 2>$null | Out-Null; $ghOk = ($LASTEXITCODE -eq 0) }
+    if ($ghOk) {
+        Push-Location $ProjectRoot
+        try {
+            foreach ($b in @($Staging, $prod)) {
+                & gh api "repos/{owner}/{repo}/branches/$b/protection" 2>$null | Out-Null
+                if ($LASTEXITCODE -eq 0) { Add-Result 'PASS' "branches: $b is protected (rules 02, 07)" '' }
+                else { Add-Result 'BLOCKED' "branches: $b is protected (rules 02, 07)" 'No branch protection rule found. Rulesets are not visible here; confirm in GitHub settings.' }
+            }
+            $dob = (& gh repo view --json deleteBranchOnMerge -q .deleteBranchOnMerge 2>$null)
+            if ($LASTEXITCODE -ne 0) { $dob = 'unknown' }
+            if ("$dob" -eq 'true') { Add-Result 'PASS' 'branches: Automatically delete head branches is on (rule 07)' '' }
+            else { Add-Result 'BLOCKED' 'branches: Automatically delete head branches is on (rule 07)' "Turn it on in GitHub settings (value: $dob). Protect $Staging and $prod first." }
+        } finally { Pop-Location }
+    } else {
+        Add-Result 'BLOCKED' 'branches: protection and auto-delete (rules 02, 07)' "Cannot confirm. Check in GitHub settings: $Staging and $prod protected against deletion and force-push; Automatically delete head branches on."
+    }
+
+    # Handoff (rules 03, 08)
+    $hf = Join-Path $ProjectRoot 'HANDOFF.md'
+    if (-not (Test-Path -LiteralPath $hf)) { Add-Result 'FIX' 'handoff: HANDOFF.md exists (rules 03, 08)' 'Install the pipeline kit, or create a minimal HANDOFF.md.' }
+    else {
+        $ht = Read-Text $hf
+        if ($ht -match '(?i)last updated[*_: ]*\d{4}-\d{2}-\d{2}') { Add-Result 'PASS' 'handoff: has a Last updated date' '' }
+        else { Add-Result 'FIX' 'handoff: has a Last updated date' 'Add: **Last updated:** YYYY-MM-DD' }
+        if ($ht -match '(?i)divergence:') { Add-Result 'PASS' 'handoff: has a Divergence line' '' }
+        else { Add-Result 'FIX' 'handoff: has a Divergence line' 'Add: **Divergence:** <branch state>' }
+    }
+
+    # Secrets (rule 04). Never reads .env files.
+    $gi = Join-Path $ProjectRoot '.gitignore'
+    if ((Test-Path -LiteralPath $gi) -and ((Read-Text $gi) -match '(?m)^/?\.env(\*|\.local|\.\*)?[ \t]*\r?$')) { Add-Result 'PASS' 'secrets: .env is in .gitignore (rule 04)' '' }
+    else { Add-Result 'FIX' 'secrets: .env is in .gitignore (rule 04)' 'Add .env and .env.local to .gitignore.' }
+    if (Test-Path -LiteralPath (Join-Path $ProjectRoot '.env.example')) { Add-Result 'PASS' 'secrets: .env.example exists' '' }
+    else { Add-Result 'FIX' 'secrets: .env.example exists' 'Create it with placeholder values only.' }
+    $sj = Join-Path $ProjectRoot '.claude/settings.json'
+    $denyOk = $false
+    if (Test-Path -LiteralPath $sj) {
+        try {
+            $deny = @((Read-Text $sj | ConvertFrom-Json).permissions.deny)
+            $denyOk = [bool]($deny | Where-Object { $_ -and $_.StartsWith('Read(') -and $_.Contains('.env') })
+        } catch { $denyOk = $false }
+    }
+    if ($denyOk) { Add-Result 'PASS' 'secrets: settings.json denies reading .env' '' }
+    else { Add-Result 'FIX' 'secrets: settings.json denies reading .env' 'Add Read(./.env) and Read(./.env.*) to permissions.deny in .claude/settings.json.' }
+
+    # Release notes and PR checklist files (rule 05)
+    if (Get-ChildItem -LiteralPath $ProjectRoot -File -Filter 'CHANGELOG*' -ErrorAction SilentlyContinue) { Add-Result 'PASS' 'release notes: CHANGELOG exists (rule 05)' '' }
+    else { Add-Result 'FIX' 'release notes: CHANGELOG exists (rule 05)' 'Create CHANGELOG.md, or name another file in CLAUDE.md.' }
+    $ver = @('package.json', 'pyproject.toml', 'Cargo.toml', 'VERSION', 'version.txt', 'setup.py', '.claude-plugin/plugin.json') | Where-Object { Test-Path -LiteralPath (Join-Path $ProjectRoot $_) }
+    if ($ver) { Add-Result 'PASS' 'release notes: version source found' "found: $($ver -join ' ')" }
+    else { Add-Result 'ASK' 'release notes: version source found' 'Tell me where the version lives.' }
+    if (Test-Path -LiteralPath (Join-Path $ProjectRoot 'claude/design-doc-index.md')) { Add-Result 'PASS' 'pr checklist: design-doc index exists' '' }
+    else { Add-Result 'FIX' 'pr checklist: design-doc index exists' 'Create claude/design-doc-index.md (the pipeline kit does this).' }
+    function Find-Named([string]$Pattern) {
+        $rootLen = $ProjectRoot.Length
+        [bool](Get-ChildItem -LiteralPath $ProjectRoot -Recurse -Depth 2 -Force -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -like $Pattern -and $_.FullName.Substring($rootLen) -notmatch '[\\/](\.git|node_modules)([\\/]|$)' } | Select-Object -First 1)
+    }
+    if (Find-Named '*architecture*') { Add-Result 'PASS' 'pr checklist: architecture diagram found' '' }
+    else { Add-Result 'ASK' 'pr checklist: architecture diagram found' 'Name the diagram file, or say there is none.' }
+    if (Find-Named '*regression*') { Add-Result 'PASS' 'pr checklist: regression list found' '' }
+    else { Add-Result 'ASK' 'pr checklist: regression list found' 'Name the regression list, or say there is none.' }
+
+    # Tools (rules 01, 11) and model tiers (rule 06)
+    if (Test-Cmd 'gh') {
+        & gh auth status 2>$null | Out-Null
+        if ($LASTEXITCODE -eq 0) { Add-Result 'PASS' 'tools: gh installed and signed in' '' }
+        else { Add-Result 'FIX' 'tools: gh installed and signed in' 'Run gh auth login yourself. Never paste a token into chat.' }
+    } else { Add-Result 'FIX' 'tools: gh installed and signed in' "Install gh. Without it, read CI on the PR's Checks tab." }
+    if ((Test-Cmd 'python3') -or (Test-Cmd 'python')) { Add-Result 'PASS' 'tools: python available' '' }
+    else { Add-Result 'FIX' 'tools: python available' "The pipeline kit's tools need Python 3." }
+    $agents = @(Get-ChildItem -LiteralPath (Join-Path $ProjectRoot '.claude/agents') -File -Filter '*.md' -ErrorAction SilentlyContinue)
+    if ($agents -and ($agents | Select-String -Pattern '^model: ' -Quiet)) { Add-Result 'PASS' 'model tiers: agent files pin a model (rule 06)' '' }
+    else { Add-Result 'ASK' 'model tiers: agent files pin a model (rule 06)' 'Install the kit, or say which model fills each tier.' }
+    Add-Result 'INFO' 'test command' 'Rules 01 and 05 need one. Set TEST_COMMAND in the kit interview, or say there is none.'
+    Add-Result 'INFO' 'rule 10' 'Applies only if test suites share live data or accounts.'
+    Write-Host ''
+    Write-Host 'Checks do not enforce rules. Only settings.json permissions and hooks enforce.'
+    if ($script:Bad -eq 0) { Write-Host 'All rule checks passed.'; exit 0 }
+    Write-Host "$($script:Bad) check(s) not PASS. Fix them, then re-run with -Check."
+    exit 1
+}
 
 $commit = Invoke-Git $Repo @('rev-parse', '--short', 'HEAD')
 if (-not $commit) { $commit = 'unknown' }
