@@ -14,6 +14,7 @@ Central shared repository for AI coding tool configuration: instructions, script
 | [`commands/`](commands/) | Slash commands (`*.md`). |
 | [`mcp/`](mcp/) | MCP server configs (`.mcp.json` examples) — **no secrets**. |
 | [`scripts/`](scripts/) | Helper scripts (install/sync, setup, utilities). |
+| [`docs/`](docs/) | Talks and explainers about this repo (e.g. [`docs/talks/the-harness.html`](docs/talks/the-harness.html), a presenter deck on the rules, pipeline and safe delivery). |
 
 ## Conventions
 
