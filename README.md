@@ -33,10 +33,11 @@ fails, stop and show the error. This repo and the pipeline kit it installs,
 ## Which path to use
 
 - **A project (rules and agent pipeline):** use [`INSTALL-PROMPT.md`](INSTALL-PROMPT.md). It runs `gwinrules`,
-  then installs the pipeline kit.
+  then installs the pipeline kit. It also offers the token status line for your own `~/.claude` (optional, and
+  not part of the project).
 - **Only the shared rules in a project:** run `gwinrules` (next section).
-- **Your own machine:** run `install.sh` / `install.ps1`. They only link personal skills, agents and
-  commands into `~/.claude`. They do not install rules or the pipeline.
+- **Your own machine:** run `install.sh` / `install.ps1`. They link personal skills, agents and commands into
+  `~/.claude`, and install the token status line. They do not install rules or the pipeline.
 
 ## Shared rules in a project: `gwinrules`
 
