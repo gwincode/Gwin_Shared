@@ -33,9 +33,11 @@ Named `HANDOFF.md` to match what `gwinrules --check` looks for.
 - Verify the animated loader and the statusline badge on Windows (PowerShell 7 and Windows Terminal).
 - A stray `/steps.txt` exists at the filesystem root from an earlier test command. It is outside the repo. The user should delete it with `rm /steps.txt`.
 - Decide whether the statusline should also be offered by `INSTALL-PROMPT.md` (per-project install). Currently it is personal-only.
+- **Next step, needs a decision:** `install.sh` / `install.ps1` do not use `ascii-loader` yet. The loader was built to explain an install as it runs, so the natural follow-up is to have the installers feed their steps (link skills, link agents, link commands, install status line) through it. Recommended as an opt-in flag first (`--loader` / `-Loader`), so the plain output stays the default for logs and CI.
 
 ## Log
 
 - **Prompt 1:** Built the ASCII loader (sh + ps1), tested both, committed, pushed, opened draft PR #4, subscribed to PR activity.
 - **Prompt 2:** Watched PR #4 events. CI green, nothing to act on.
-- **Prompt 3 (this one):** Created this handoff file. Installed the `cc-token-statusline` badge into the sandbox `~/.claude`. Vendored it into `plugins/`. Wired it into `install.sh` and `install.ps1` (default on, opt-out flag, personal target only). Documented in `plugins/README.md` and `scripts/README.md`.
+- **Prompt 4:** User said "continue" after switching the session model to Sonnet 5.5. Checked state: working tree clean, remote in sync at `8df37b0`, CI green, no review threads. Nothing left that can be done without the user (Windows verification, removing `/steps.txt`). Added the loader-in-installers follow-up to Open items.
+- **Prompt 3:** Created this handoff file. Installed the `cc-token-statusline` badge into the sandbox `~/.claude`. Vendored it into `plugins/`. Wired it into `install.sh` and `install.ps1` (default on, opt-out flag, personal target only). Documented in `plugins/README.md` and `scripts/README.md`.
