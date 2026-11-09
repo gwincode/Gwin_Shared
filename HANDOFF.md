@@ -7,7 +7,8 @@ Named `HANDOFF.md` to match what `gwinrules --check` looks for.
 ## Current state
 
 - **Branch:** `claude/admiring-fermi-vysbwv`
-- **Open PR:** [gwincode/Gwin_Shared#4](https://github.com/gwincode/Gwin_Shared/pull/4) (draft). Contains the ASCII loader, the status line install, the `--loader` flag, and this file.
+- **PR:** [gwincode/Gwin_Shared#4](https://github.com/gwincode/Gwin_Shared/pull/4), marked ready by the user and then merged into `main` at their request. It contains the ASCII loader, the status line install, the `--loader` flag, and this file.
+- **Next change:** a merged PR is finished and cannot take new work. Restart this branch from the latest `main` (`git fetch origin main && git checkout -B claude/admiring-fermi-vysbwv origin/main`) and open a new PR.
 - **Session:** `GS PR#4/ascii-loader`
 - **Also cloned (read-only, shallow):** `gwincode/gwin-claude-agent-pipeline-kit` at `/home/user/gwincode/gwin-claude-agent-pipeline-kit` (HEAD `2201746`, `main`). This session cannot push to it. Nothing has been changed there.
 
@@ -62,3 +63,4 @@ Each was reproduced before fixing and re-tested after.
 - **Prompt 4:** "continue" after switching the session model. State check only; added the loader-in-installers follow-up to Open items.
 - **Prompt 5:** Added `--loader` / `-Loader` to both installers. Reviewed the loader code against real probes, fixed nine issues (listed above), split it into a library plus thin command-line wrappers, and verified plain-mode installer output is unchanged against saved baselines.
 - **Prompt 6 (mid-turn):** Cloned `gwincode/gwin-claude-agent-pipeline-kit` read-only into `/home/user/gwincode/`. Also cleaned up four of my own test processes that a test-harness mistake had left stopped.
+- **Prompt 7:** User marked PR #4 ready for review, then asked to merge it. CI was green and the PR mergeable with no review threads. Updated this file (PR state, next-change note) and merged with a merge commit, matching the repo's history.
