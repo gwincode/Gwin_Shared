@@ -3,8 +3,8 @@
 Supports: Claude Code (Desktop Code tab or CLI), Windows, macOS or Linux.
 
 **You need:** git; Python 3; and a project folder that is a git repo with a GitHub remote.
-**Optional:** npm, pnpm or yarn (used only to detect allow rules); a staging branch; a deploy host. Repos
-without them are supported.
+**Optional:** npm, pnpm or yarn (used only to detect allow rules); a staging branch; a deploy host; the token
+status line for your own Claude Code (step 6c, needs Python 3). Repos without them are supported.
 
 **How to use:** open Claude Code in your project's root folder, start a new session, and paste everything
 between the two lines below. Claude asks you one set of questions, shows every change before it writes it,
@@ -100,9 +100,34 @@ only on my yes. Run the checks again after step 6 and list the result in the ste
 Rules 09 and 12 need nothing. Rule 10 applies only when test suites share live data or accounts; ask me once.
 These checks do not enforce a rule. Only `settings.json` permissions and hooks enforce. Say so in the report.
 
+**6c. Optional: token status line (personal, not part of the project).** This step changes my own Claude Code
+settings in `~/.claude`. It does not change this repo.
+- If the environment variable `CLAUDE_CODE_REMOTE` is `true`, this is a cloud session. A cloud container does
+  not keep `~/.claude` on my computer. Skip this step, and say so in one line.
+- Otherwise, ask me: "Install the token status line in my personal `~/.claude`? Yes or no." Wait for my answer.
+  On no, skip this step.
+- On yes, find the installer at `<parent>/Gwin_Shared/plugins/cc-token-statusline/scripts/install.py`. `<parent>`
+  is the folder from step 2. If the file is missing, skip this step.
+- Choose the Python command. On Windows, if `py` exists (check with `where py`), use `py -3`. Otherwise use
+  `python`. On macOS and Linux, use `python3`. Run `<python> --version`. If it does not print `Python 3`, say
+  that Python 3 is missing, and skip this step.
+- Preview. Run the installer with `--dry-run`: `<python> "<parent>/Gwin_Shared/plugins/cc-token-statusline/scripts/install.py" --dry-run`
+- Show me the output in plain words. Say which files it copies to `~/.claude/hooks/`. Say which `statusLine`
+  it sets in `~/.claude/settings.json`. Say whether I already have a status line. If I do, it keeps that one and
+  runs it first, then adds the token badge after it. Then ask: "Apply this? Yes or no."
+- On no, skip this step. On yes, run the same command without `--dry-run`. The installer backs up
+  `~/.claude/settings.json` first. Show me the result lines.
+- Never add `--replace`. It removes a status line I already have. Never edit `settings.json` or the `hooks`
+  folder by hand.
+- If Python 3 is missing or the installer fails, say so plainly and show the error. Change nothing else, and
+  carry on to step 7. A failed status line does not fail the install.
+- To undo later, run the same installer command with `--uninstall` in place of `--dry-run`.
+
 **7. Report and finish.**
 - Report in the shape of the kit's step 9, plus: the shared-rule files installed and their stamp
   (`gwincode/Gwin_Shared@<commit>`).
+- Report the token status line as one of: installed (with the backup file name); skipped (cloud session, or I
+  said no); or failed (with the error). A missing Python 3 or installer counts as failed.
 - List every step 6b check as PASS, FIX applied, or BLOCKED, with what I must do next for each BLOCKED one.
 - Ask whether to remove the `pipeline-kit/` copy from this repo. This answer decides. On a yes, remove the
   folder and its line in `.git/info/exclude`. On a no, keep both.
@@ -121,3 +146,5 @@ These checks do not enforce a rule. Only `settings.json` permissions and hooks e
 - **Shared rules:** run `git pull` in `Gwin_Shared`, then run `gwinrules` (preview, then apply) in each
   project and commit the result.
 - **Pipeline:** follow the kit's own update notes in its README.
+- **Token status line:** after `git pull` in `Gwin_Shared`, run the installer again, as in step 6c (preview,
+  then apply). It copies the newer badge script. Running it again is safe.
