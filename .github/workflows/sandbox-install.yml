@@ -1,0 +1,18 @@
+# Supports: GitHub Actions. Runs the scripted part of the one-shot install in a sandbox repo.
+# See scripts/test-sandbox-install.sh. The Claude-driven steps are not tested here.
+name: sandbox-install
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sandbox-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run the sandbox install test
+        run: sh scripts/test-sandbox-install.sh
