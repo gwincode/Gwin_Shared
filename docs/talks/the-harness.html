@@ -155,11 +155,13 @@
   .tag.hard { color: var(--ground); background: var(--accent); }
   .tag.human { color: var(--ground); background: var(--gate); }
 
-  .ladder { display: flex; align-items: flex-end; gap: 8px; height: 200px; max-width: 760px; }
+  .ladder { display: flex; align-items: flex-end; gap: 8px; height: 240px; max-width: 760px; }
   .rung { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: 6px 6px 0 0; padding: 10px; display: flex; flex-direction: column; justify-content: flex-end; min-width: 0; }
   .rung .n { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
   .rung .t { font-size: 12.5px; font-weight: 600; margin-top: 4px; }
   .rung.base { background: var(--accent-dim); border-color: var(--accent); }
+  .rung .c { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
+  .rung .c b { color: var(--gate); font-weight: 700; font-variant-numeric: tabular-nums; }
 
   .steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px; }
   @media (max-width: 760px) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
@@ -442,16 +444,16 @@
       } },
 
     { section: "Part 2 — The pipeline",
-      note: "Which model runs each agent? Rule six. Three tiers: standard, advanced, frontier. [SLOW] Raise effort before you raise the tier, because more thinking time is cheaper than a bigger model. Routine work stays on step one. A planning agent like po may start at step three, because planning is where mistakes cost the most. Projects pin full model IDs, so a new release can't change behavior silently. That is {version pinning}.",
+      note: "Which model runs each agent? Rule six. Three tiers: standard, advanced, frontier. [SLOW] Raise effort before you raise the tier, because more thinking time is cheaper than a bigger model. Routine work stays on step one. A planning agent like po may start at step three, because planning is where mistakes cost the most. Projects pin full model IDs, so a new release can't change behavior silently. That is {version pinning}. Now look at the cost line. Per token, Opus costs twice Sonnet, and Fable costs four times Sonnet. Effort does not change the price per token, only how many tokens the task uses. That is why the ladder raises effort first: it is the cheaper lever. Judge it by {cost per completed task}, not cost per request.",
       render: function () {
         return '<div class="rule-num">06</div><h1 class="big" style="font-size:clamp(24px,3vw,38px)">Raise effort before you raise the tier.</h1>' +
           '<div class="ladder" style="margin-top:22px">' +
-          '<div class="rung base" style="height:30%"><div class="n">1 · default</div><div class="t">Standard · medium</div></div>' +
-          '<div class="rung" style="height:45%"><div class="n">2</div><div class="t">Standard · high</div></div>' +
-          '<div class="rung" style="height:62%"><div class="n">3 · po starts here</div><div class="t">Advanced · high</div></div>' +
-          '<div class="rung" style="height:80%"><div class="n">4</div><div class="t">Advanced · xhigh</div></div>' +
-          '<div class="rung" style="height:100%"><div class="n">5 · rare</div><div class="t">Frontier</div></div>' +
-          '</div><div class="lede">Climb one step at a time, and say which trigger fired. Never run routine work higher “to be safe”.</div>';
+          '<div class="rung base" style="height:36%"><div class="n">1 · default</div><div class="t">Standard · medium</div><div class="c">Sonnet · <b>1×</b></div></div>' +
+          '<div class="rung" style="height:50%"><div class="n">2</div><div class="t">Standard · high</div><div class="c">Sonnet · <b>1×</b> + tokens</div></div>' +
+          '<div class="rung" style="height:66%"><div class="n">3 · po starts here</div><div class="t">Advanced · high</div><div class="c">Opus · <b>2×</b></div></div>' +
+          '<div class="rung" style="height:82%"><div class="n">4</div><div class="t">Advanced · xhigh</div><div class="c">Opus · <b>2×</b> + tokens</div></div>' +
+          '<div class="rung" style="height:100%"><div class="n">5 · rare</div><div class="t">Frontier</div><div class="c">Fable · <b>4×</b></div></div>' +
+          '</div><div class="lede">Cost per token, relative to Sonnet. List prices per 1M tokens (input / output): Sonnet $2 / $10, Opus $4 / $20, Fable $8 / $40 (Anthropic API, Nov 2026). Effort does not change the price per token. It changes how many tokens a task uses.</div>';
       } },
 
     { section: "Part 2 — The pipeline",
