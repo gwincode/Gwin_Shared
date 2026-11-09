@@ -2,9 +2,7 @@
 
 Supports: Claude Code (Desktop Code tab or CLI), Windows, macOS or Linux.
 
-**You need:** git; Python 3; a GitHub account with read access to
-`gwincode/gwin-claude-agent-pipeline-kit` (that repo is private: ask the owner to add you; `gwincode/Gwin_Shared`
-is public); and a project folder that is a git repo with a GitHub remote.
+**You need:** git; Python 3; and a project folder that is a git repo with a GitHub remote.
 
 **How to use:** open Claude Code in your project's root folder, start a new session, and paste everything
 between the two lines below. Claude asks you one set of questions, shows every change before it writes it,
@@ -35,8 +33,7 @@ changes, list them and ask whether to continue. Note the branches (`git branch -
   there. If not, clone `https://github.com/gwincode/Gwin_Shared.git` to `<parent>/Gwin_Shared`. If the clone
   fails, stop and tell me the error.
 - The kit: clone `https://github.com/gwincode/gwin-claude-agent-pipeline-kit.git` to a temporary folder
-  outside this repo. If the clone fails with "not found" or an access error, stop and tell me to ask the owner
-  for access to the kit. Copy its `pipeline-kit/` folder into this repo's root (the kit's install expects it
+  outside this repo. If the clone fails, stop and tell me the error. Copy its `pipeline-kit/` folder into this repo's root (the kit's install expects it
   there). Do not commit `pipeline-kit/`.
 
 **3. Preview the shared rules.** Run the `gwinrules` preview from `<parent>/Gwin_Shared/scripts/`:

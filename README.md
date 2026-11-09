@@ -26,8 +26,8 @@ Central shared repository for AI coding tool configuration: instructions, script
 
 To set up someone else's project (shared rules and the agent pipeline in one pass), give them
 [`INSTALL-PROMPT.md`](INSTALL-PROMPT.md). They paste the part between its two lines into Claude Code in their
-project. This repo is public. The pipeline kit it installs is private, so they need read access to
-[gwin-claude-agent-pipeline-kit](https://github.com/gwincode/gwin-claude-agent-pipeline-kit) first.
+project. This repo and the pipeline kit it installs,
+[gwin-claude-agent-pipeline-kit](https://github.com/gwincode/gwin-claude-agent-pipeline-kit), are both public.
 
 ## Shared rules in a project: `gwinrules`
 
