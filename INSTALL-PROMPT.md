@@ -3,6 +3,8 @@
 Supports: Claude Code (Desktop Code tab or CLI), Windows, macOS or Linux.
 
 **You need:** git; Python 3; and a project folder that is a git repo with a GitHub remote.
+**Optional:** npm, pnpm or yarn (used only to detect allow rules); a staging branch; a deploy host. Repos
+without them are supported.
 
 **How to use:** open Claude Code in your project's root folder, start a new session, and paste everything
 between the two lines below. Claude asks you one set of questions, shows every change before it writes it,
@@ -25,7 +27,9 @@ instruction per sentence, active voice. Keep code, commands and file names exact
 that it has a GitHub remote (`git remote -v`). If it is not a git repo, or it has no GitHub remote, stop and
 tell me: the rules and agents will then work only on this computer, because Claude cloud sessions and other
 computers get them from GitHub. Ask whether to continue anyway. Run `git status`. If there are uncommitted
-changes, list them and ask whether to continue. Note the branches (`git branch -r`).
+changes, list them and ask whether to continue. Note the branches (`git branch -r`). Check two things: does `CLAUDE.md` have a project description, and does
+`README.md` say who the product is for and why it is different? The `po` agent needs that sentence. Note
+the answers for step 7.
 
 **2. Get the sources.** Use the folder that contains this repo as the parent (for example `C:\code` or
 `~/code`).
@@ -34,7 +38,11 @@ changes, list them and ask whether to continue. Note the branches (`git branch -
   fails, stop and tell me the error.
 - The kit: clone `https://github.com/gwincode/gwin-claude-agent-pipeline-kit.git` to a temporary folder
   outside this repo. If the clone fails, stop and tell me the error. Copy its `pipeline-kit/` folder into this repo's root (the kit's install expects it
-  there). Do not commit `pipeline-kit/`.
+  there). Add the line `pipeline-kit/` to `.git/info/exclude`. That file is local and untracked. It stops
+  the Stop hook from asking you to commit the copy. Do not commit `pipeline-kit/`.
+
+In a cloud session, check that `git clone` of `Gwin_Shared` and the kit works before step 3. If it fails,
+stop and show the error.
 
 **3. Preview the shared rules.** Run the `gwinrules` preview from `<parent>/Gwin_Shared/scripts/`:
 `gwinrules.ps1` on Windows, `gwinrules.sh` on macOS or Linux, with no apply flag. Keep its output for step 4.
@@ -43,19 +51,63 @@ changes, list them and ask whether to continue. Note the branches (`git branch -
 exactly (read the kit, detect what you can, scan the project commands). Then send me **one message** with:
 - the `gwinrules` preview from step 3, in plain words (which files it adds, and the block it adds to
   `CLAUDE.md`);
-- every question from the kit's step 3 interview, with your proposed values;
-- the kit's step 4d summary of project commands.
+- every question from the kit's step 3 interview, with your proposed values (read the time zone from the
+  environment: `TZ` first, then a real IANA name, `date +%Z` last; propose it; fall back to `UTC`);
+- the kit's step 4d summary of project commands;
+- the result of the rule checks in step 6b, run now in report-only mode (write nothing). Mark each check
+  PASS, FIX or BLOCKED.
 Wait for my answer. Ask again only if an answer contradicts another.
 
 **5. Install the shared rules.** Run `gwinrules` again with `-Apply` (PowerShell) or `--apply` (shell).
 
 **6. Install the pipeline.** Follow steps 5 to 8 of `pipeline-kit/INSTALL-PROMPT.md` exactly. The shared-rules
-block that step 5 added to `CLAUDE.md` stays where it is; append the pipeline block after it.
+block that step 5 added to `CLAUDE.md` stays where it is. Append the pipeline block after the gwin-shared:end marker.
+
+**6b. Make every rule able to fire.** The shared rules are instructions. A rule fires only when Claude loads
+it and the files, branches and tools it names exist. First run `gwinrules --check` (`-Check` in PowerShell)
+from `<parent>/Gwin_Shared/scripts/`. It does the read-only checks below and exits 1 if one is not PASS.
+Use its output, and do by hand only what it cannot check. Run these checks. Show a diff for each FIX and write it
+only on my yes. Run the checks again after step 6 and list the result in the step 7 report.
+- **Loaded.** `.claude/gwin-shared/` is not in `.gitignore` and is not ignored by git
+  (`git check-ignore -v .claude/gwin-shared/RULES.md`). If it is ignored, FIX: propose the exact
+  `.gitignore` change. After the install, run `/memory` in the new session. All 12 rule files must show.
+- **Staging branch** (rules 02, 07). The remote has a `staging` branch, or the staging name from `CLAUDE.md`.
+  If not, BLOCKED: tell me to create it from the production branch, protect it, and point a deployment at it
+  if the repo deploys. Do not create or push a branch yourself. Do not set staging and production to the
+  same branch. Do not call the install complete until the branch exists.
+- **Branch protection** (rules 02, 07). `staging` and `main` are protected against deletion and force-push,
+  and "Automatically delete head branches" is on. You cannot read this from git. Ask me to confirm in the
+  GitHub settings. Mark it BLOCKED until I say yes.
+- **Handoff file** (rules 03, 08). `HANDOFF.md` exists at the repo root. If not, FIX: the kit creates it in
+  step 6. If the kit is not installed, create a minimal one with a `**Last updated:** YYYY-MM-DD` line
+  (today, in my time zone), a `**Divergence:**` line, and the headings *What moved*, *Next up* and
+  *Blockers and open decisions*.
+- **Secrets** (rule 04). Each item is present, or FIX: `.env` and `.env.local` in `.gitignore`; a
+  `.env.example` with placeholder values only; and `Read(./.env)` and `Read(./.env.*)` in `permissions.deny`
+  in `.claude/settings.json`, merged into the file the kit installed. Never read a real `.env` file to check.
+- **Release notes** (rule 05). `CHANGELOG.md` (or the file `CLAUDE.md` names) and a version source exist.
+  If there is no changelog, FIX: create a starter with a heading and an *Unreleased* section. If there is no
+  version source, ask me where the version lives. Do not invent one.
+- **Other files the PR checklist names** (rule 05). Report each of these as present or missing, and ask me
+  what to do about each missing one: the architecture diagram, the regression list, and
+  `claude/design-doc-index.md`. Create only the index (the kit does this).
+- **Tools** (rules 01, 11). `git` works, and `gh` is installed and signed in (`gh auth status`). If `gh`
+  is missing, FIX: tell me how to install it; rule 11 then falls back to the PR's Checks tab in a browser.
+  Never ask me for a token. A test command exists (`TEST_COMMAND` from the kit interview, or `none`); if it
+  is `none`, tell me that rule 01 and rule 05 item 4 cannot show test counts.
+- **Model tiers** (rule 06). The pipeline agent files pin full model IDs. If the kit is not installed, ask me
+  which model fills each tier and record the answer in `CLAUDE.md`.
+Rules 09 and 12 need nothing. Rule 10 applies only when test suites share live data or accounts; ask me once.
+These checks do not enforce a rule. Only `settings.json` permissions and hooks enforce. Say so in the report.
 
 **7. Report and finish.**
 - Report in the shape of the kit's step 9, plus: the shared-rule files installed and their stamp
   (`gwincode/Gwin_Shared@<commit>`).
-- Ask whether to remove the `pipeline-kit/` copy from this repo. Remove it only on a yes.
+- List every step 6b check as PASS, FIX applied, or BLOCKED, with what I must do next for each BLOCKED one.
+- Ask whether to remove the `pipeline-kit/` copy from this repo. This answer decides. On a yes, remove the
+  folder and its line in `.git/info/exclude`. On a no, keep both.
+- If step 1 found no project description in `CLAUDE.md` and no audience sentence in `README.md`, tell me.
+  Offer `/init` now, after the install. Do not run it before. It is not required.
 - Ask whether to commit. On a yes: create a new branch `claude/install-gwin-rules-and-pipeline` off the
   staging branch (or the default branch if there is no staging branch), commit only the installed files,
   push that branch, and open a PR against the same base. Never push to the production branch. Do not

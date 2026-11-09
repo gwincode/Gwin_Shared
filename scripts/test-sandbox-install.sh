@@ -7,7 +7,8 @@
 #   3. Clones the public pipeline kit and copies pipeline-kit/ in.
 #   4. Copies agents, commands, settings and the CLAUDE block, as steps 5 and 6 of the install do.
 #   5. Fills the placeholders with fill-placeholders.py (preview, then --write).
-#   6. Asserts the expected files exist and no placeholder is left.
+#   6. Runs gwinrules --check (and -Check in PowerShell when pwsh exists) and compares the results.
+#   7. Asserts the expected files exist, no placeholder is left, and the checks behave.
 # It does NOT test the Claude-driven steps (interview, merges, permission prompts, /agents, /status).
 # Exit code is non-zero if any assertion fails.
 #
@@ -72,7 +73,32 @@ cd "$SANDBOX"
 python3 pipeline-kit/tools/fill-placeholders.py "$WORK/values.json" .claude CLAUDE.md HANDOFF.md
 python3 pipeline-kit/tools/fill-placeholders.py "$WORK/values.json" .claude CLAUDE.md HANDOFF.md --write
 
+echo "== 5b. gwinrules --check"
+CHK="$WORK/check.txt"
+sh "$ROOT/scripts/gwinrules.sh" --project "$SANDBOX" --check > "$CHK" 2>&1 && chk_rc=0 || chk_rc=$?
+git -C "$SANDBOX" update-ref refs/remotes/origin/staging HEAD
+sed -i.bak "s/YYYY-MM-DD/2026-01-01/" "$SANDBOX/HANDOFF.md" && rm -f "$SANDBOX/HANDOFF.md.bak"
+CHK2="$WORK/check2.txt"
+sh "$ROOT/scripts/gwinrules.sh" --project "$SANDBOX" --check > "$CHK2" 2>&1 || true
+PARITY=skip
+if command -v pwsh >/dev/null 2>&1; then
+  CHKPS="$WORK/check-ps.txt"
+  pwsh -NoProfile -File "$ROOT/scripts/gwinrules.ps1" -Project "$SANDBOX" -Check > "$CHKPS" 2>&1 || true
+  grep -E '^  (PASS|FIX|BLOCKED|ASK|INFO) ' "$CHK2" > "$WORK/sh.lines"
+  grep -E '^  (PASS|FIX|BLOCKED|ASK|INFO) ' "$CHKPS" | sed 's/python available/python3 available/' > "$WORK/ps.lines"
+  sed -i 's/python3 available/python available/' "$WORK/sh.lines" "$WORK/ps.lines"
+  PARITY=run
+fi
+
 echo "== 6. Assertions"
+check "--check exits 1 when a rule cannot fire (no staging branch)" test "$chk_rc" -eq 1
+check "--check reports staging BLOCKED when it is missing" grep -q 'BLOCKED  branches: staging exists' "$CHK"
+check "--check passes the rule copies" grep -q 'PASS     rules: all rule files' "$CHK"
+check "--check flags the unfilled HANDOFF.md date (template YYYY-MM-DD)" grep -q 'FIX      handoff: has a Last updated date' "$CHK"
+check "--check passes the HANDOFF.md checks once the date is filled" grep -q 'PASS     handoff: has a Last updated date' "$CHK2"
+check "--check passes once origin/staging exists" grep -q 'PASS     branches: staging exists' "$CHK2"
+check "--check flags the missing .env deny" grep -q 'FIX      secrets: settings.json denies reading .env' "$CHK"
+if [ "$PARITY" = run ]; then check "--check and -Check give the same results (sh vs PowerShell)" diff "$WORK/sh.lines" "$WORK/ps.lines"; fi
 check "rules copied (12 files + RULES.md)" test "$(ls .claude/gwin-shared | wc -l)" -eq 13
 check "RULES.md present" test -f .claude/gwin-shared/RULES.md
 check "CLAUDE.md imports RULES.md" grep -q '@.claude/gwin-shared/RULES.md' CLAUDE.md
