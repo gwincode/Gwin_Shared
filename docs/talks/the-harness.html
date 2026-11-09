@@ -444,16 +444,16 @@
       } },
 
     { section: "Part 2 — The pipeline",
-      note: "Which model runs each agent? Rule six. Three tiers: standard, advanced, frontier. [SLOW] Raise effort before you raise the tier, because more thinking time is cheaper than a bigger model. Routine work stays on step one. A planning agent like po may start at step three, because planning is where mistakes cost the most. Projects pin full model IDs, so a new release can't change behavior silently. That is {version pinning}. Now look at the cost line. Per token, Opus costs twice Sonnet, and Fable costs four times Sonnet. Effort does not change the price per token, only how many tokens the task uses. That is why the ladder raises effort first: it is the cheaper lever. Judge it by {cost per completed task}, not cost per request.",
+      note: "Which model runs each agent? Rule six. Three tiers: standard, advanced, frontier. [SLOW] Raise effort before you raise the tier, because more thinking time is cheaper than a bigger model. Routine work stays on step one. A planning agent like po may start at step three, because planning is where mistakes cost the most. Projects pin full model IDs, so a new release can't change behavior silently. That is {version pinning}. Now look at the cost line: the estimated average cost of one completed task. About a dollar fifty at the default, about nine dollars at the top. [SLOW] Step one to step two adds about seventy-five cents. A jump to the advanced tier adds about three dollars. That is why the ladder raises effort first. Judge spend by {cost per completed task}, not cost per request. These are estimates. Use your own logs.",
       render: function () {
         return '<div class="rule-num">06</div><h1 class="big" style="font-size:clamp(24px,3vw,38px)">Raise effort before you raise the tier.</h1>' +
           '<div class="ladder" style="margin-top:22px">' +
-          '<div class="rung base" style="height:36%"><div class="n">1 · default</div><div class="t">Standard · medium</div><div class="c">Sonnet · <b>1×</b></div></div>' +
-          '<div class="rung" style="height:50%"><div class="n">2</div><div class="t">Standard · high</div><div class="c">Sonnet · <b>1×</b> + tokens</div></div>' +
-          '<div class="rung" style="height:66%"><div class="n">3 · po starts here</div><div class="t">Advanced · high</div><div class="c">Opus · <b>2×</b></div></div>' +
-          '<div class="rung" style="height:82%"><div class="n">4</div><div class="t">Advanced · xhigh</div><div class="c">Opus · <b>2×</b> + tokens</div></div>' +
-          '<div class="rung" style="height:100%"><div class="n">5 · rare</div><div class="t">Frontier</div><div class="c">Fable · <b>4×</b></div></div>' +
-          '</div><div class="lede">Cost per token, relative to Sonnet. List prices per 1M tokens (input / output): Sonnet $2 / $10, Opus $4 / $20, Fable $8 / $40 (Anthropic API, Nov 2026). Effort does not change the price per token. It changes how many tokens a task uses.</div>';
+          '<div class="rung base" style="height:36%"><div class="n">1 · default</div><div class="t">Standard · medium</div><div class="c">Sonnet · <b>~$1.50</b></div></div>' +
+          '<div class="rung" style="height:50%"><div class="n">2</div><div class="t">Standard · high</div><div class="c">Sonnet · <b>~$2.25</b></div></div>' +
+          '<div class="rung" style="height:66%"><div class="n">3 · po starts here</div><div class="t">Advanced · high</div><div class="c">Opus · <b>~$4.50</b></div></div>' +
+          '<div class="rung" style="height:82%"><div class="n">4</div><div class="t">Advanced · xhigh</div><div class="c">Opus · <b>~$6.75</b></div></div>' +
+          '<div class="rung" style="height:100%"><div class="n">5 · rare</div><div class="t">Frontier</div><div class="c">Fable · <b>~$9.00</b></div></div>' +
+          '</div><div class="lede">Estimated average cost per completed task. Assumes about 500K input and 50K output tokens at medium effort, about 50% more tokens per effort step, and no caching. List prices, Anthropic API, Nov 2026. Replace with numbers from your own logs.</div>';
       } },
 
     { section: "Part 2 — The pipeline",
