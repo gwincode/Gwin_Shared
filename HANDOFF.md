@@ -7,9 +7,9 @@ Named `HANDOFF.md` to match what `gwinrules --check` looks for.
 ## Current state
 
 - **Branch:** `claude/dreamy-pascal-f8f6ss`, from `main` at `f527d68` (PR #8 merge).
-- **PR:** not opened yet. The branch is pushed (prompt 17), but the GitHub connector failed with "invalid session" when it tried to create the PR. Open it from https://github.com/gwincode/Gwin_Shared/compare/main...claude/dreamy-pascal-f8f6ss as a draft into `main` (this repo has no `staging`).
+- **PR:** [gwincode/Gwin_Shared#9](https://github.com/gwincode/Gwin_Shared/pull/9), draft into `main` (this repo has no `staging`). The session is subscribed to its activity.
 - **Next change:** owner rehearses the deck and says what to cut or change. The five live-demo slides need a real `/feature` run in a pipeline project.
-- **Session:** `vNEXT — The Harness deck (rules, pipeline, safe delivery)`
+- **Session:** `v0.4.5 / PR #9 — The Harness deck (rules, pipeline, safe delivery)`
 - **Earlier PRs:** #4 to #8 are merged into `main`. Nothing from them is open.
 
 ## What's in the repo
@@ -79,3 +79,4 @@ Each was reproduced before fixing and re-tested after.
 - **Prompt 15:** Installed the `cachekeeper@claude-cache` plugin (v0.3.1, marketplace `the-cybersapien/claude-cache`) into this cloud session's `~/.claude`, at user scope. Read its hook code first: no network calls, and it runs only `tail` on the session transcript. Not part of this repo, and gone when the container is reclaimed. Push still blocked (403).
 - **Prompt 16:** Wrote a paste-ready prompt to install cachekeeper for every cloud session (upload to claude.ai account plugins, plus setup scripts on each cloud environment, pinned to reviewed commit `af2b6c5`). cachekeeper is not in the Anthropic plugin directory (searched). Nothing changed in this repo except this line.
 - **Prompt 17:** Write access came back. Pushed `claude/dreamy-pascal-f8f6ss` (5 commits plus this one). Draft PR creation failed twice with "invalid session" from the GitHub connector.
+- **Prompt 18:** Opened draft PR #9 on the third try (the connector had reconnected). Subscribed to PR activity.
