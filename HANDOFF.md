@@ -7,7 +7,7 @@ Named `HANDOFF.md` to match what `gwinrules --check` looks for.
 ## Current state
 
 - **Branch:** `claude/dreamy-pascal-f8f6ss`, from `main` at `f527d68` (PR #8 merge).
-- **PR:** draft, adds `docs/talks/the-harness.html` (presenter deck) and a `docs/` row in `README.md`. Link added after the PR opens.
+- **PR:** not opened yet. The branch is pushed (prompt 17), but the GitHub connector failed with "invalid session" when it tried to create the PR. Open it from https://github.com/gwincode/Gwin_Shared/compare/main...claude/dreamy-pascal-f8f6ss as a draft into `main` (this repo has no `staging`).
 - **Next change:** owner rehearses the deck and says what to cut or change. The five live-demo slides need a real `/feature` run in a pipeline project.
 - **Session:** `vNEXT — The Harness deck (rules, pipeline, safe delivery)`
 - **Earlier PRs:** #4 to #8 are merged into `main`. Nothing from them is open.
@@ -78,3 +78,4 @@ Each was reproduced before fixing and re-tested after.
 - **Prompt 14:** Slide 14 now shows dollars per completed task instead of ratios, as labelled estimates. Republished. Push still blocked (403).
 - **Prompt 15:** Installed the `cachekeeper@claude-cache` plugin (v0.3.1, marketplace `the-cybersapien/claude-cache`) into this cloud session's `~/.claude`, at user scope. Read its hook code first: no network calls, and it runs only `tail` on the session transcript. Not part of this repo, and gone when the container is reclaimed. Push still blocked (403).
 - **Prompt 16:** Wrote a paste-ready prompt to install cachekeeper for every cloud session (upload to claude.ai account plugins, plus setup scripts on each cloud environment, pinned to reviewed commit `af2b6c5`). cachekeeper is not in the Anthropic plugin directory (searched). Nothing changed in this repo except this line.
+- **Prompt 17:** Write access came back. Pushed `claude/dreamy-pascal-f8f6ss` (5 commits plus this one). Draft PR creation failed twice with "invalid session" from the GitHub connector.
