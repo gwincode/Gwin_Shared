@@ -1,0 +1,718 @@
+<title>The Harness</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<!-- Supports: any modern browser. Presenter deck for the Gwin shared rules, the agent pipeline kit,
+     and safe delivery. Self-contained: no images or local assets. Keys: arrows, N (script), F (fullscreen). -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=JetBrains+Mono:wght@400;500;600;700&family=Public+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Layout: full-bleed deck; content stops above a persistent script strip; commit-graph ticks on top.
+     Single committed dark world (terminal at night). Amber = an owner gate, as in the kit's diagram. */
+  :root {
+    color-scheme: dark;
+    --ground: #0B0E14;
+    --surface: #141A25;
+    --surface2: #1C2433;
+    --ink: #E9EDF5;
+    --muted: #8B96AC;
+    --muted-dim: #4B5468;
+    --accent: #4FD8A3;
+    --accent-dim: #1C3A32;
+    --gate: #E8C874;
+    --gate-dim: #3A331A;
+    --danger: #FF6B6B;
+    --danger-dim: #3A1E22;
+    --line: #232C3D;
+    --strip: #10151F;
+    --shade: rgba(5, 7, 11, 0.94);
+    --script-h: 172px;
+    --pad-x: 84px;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+    --font-body: 'Public Sans', -apple-system, 'Segoe UI', sans-serif;
+  }
+  @media (max-width: 760px) { :root { --pad-x: 16px; --script-h: 150px; } }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    background: var(--ground); color: var(--ink); font-family: var(--font-body);
+    overflow: hidden; position: relative;
+  }
+  body.script-hidden { --script-h: 0px; }
+  ::selection { background: var(--accent); color: var(--ground); }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  #ambient {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: radial-gradient(var(--surface2) 1px, transparent 1px);
+    background-size: 34px 34px; opacity: 0.55; animation: drift 90s linear infinite;
+  }
+  @keyframes drift { from { background-position: 0 0; } to { background-position: 340px 340px; } }
+
+  #progress {
+    position: fixed; top: env(safe-area-inset-top, 0px); left: 0; right: 0; z-index: 20;
+    display: flex; gap: 3px; height: 16px;
+    padding: 10px max(18px, env(safe-area-inset-right, 0px)) 0 max(18px, env(safe-area-inset-left, 0px));
+  }
+  #progress .tick { flex: 1; height: 4px; border-radius: 1px; background: var(--surface2); transition: background 0.3s ease, box-shadow 0.3s ease; }
+  #progress .tick.past { background: var(--accent-dim); }
+  #progress .tick.current { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+
+  #section-tag {
+    position: fixed; top: calc(30px + env(safe-area-inset-top, 0px)); left: max(var(--pad-x), env(safe-area-inset-left, 0px)); z-index: 20;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.14em; color: var(--muted-dim); text-transform: uppercase;
+  }
+  #demo-pill {
+    position: fixed; top: calc(26px + env(safe-area-inset-top, 0px)); right: max(var(--pad-x), env(safe-area-inset-right, 0px)); z-index: 20;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; color: var(--ground); background: var(--accent);
+    padding: 5px 12px; border-radius: 20px; text-transform: uppercase;
+  }
+  #counter, #hint {
+    position: fixed; z-index: 20; bottom: calc(var(--script-h) + 16px);
+    font-family: var(--font-mono); color: var(--muted-dim); transition: bottom 0.3s ease;
+  }
+  #counter { right: max(22px, env(safe-area-inset-right, 0px)); font-size: 12px; font-variant-numeric: tabular-nums; }
+  #hint { left: max(22px, env(safe-area-inset-left, 0px)); font-size: 11px; letter-spacing: 0.03em; }
+  @media (max-width: 760px) { #hint { display: none; } #demo-pill { display: none !important; } }
+
+  #deck { position: relative; z-index: 1; width: 100%; height: 100%; }
+
+  .slide {
+    position: absolute; left: 0; right: 0; top: 0; bottom: var(--script-h);
+    display: flex; flex-direction: column; justify-content: safe center; gap: 0;
+    padding-block: 70px 40px;
+    padding-left: max(var(--pad-x), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--pad-x), env(safe-area-inset-right, 0px));
+    opacity: 0; transform: translateY(14px) scale(0.99);
+    transition: opacity 0.5s ease, transform 0.5s ease, bottom 0.3s ease;
+    pointer-events: none; overflow: hidden;
+  }
+  .slide.active { opacity: 1; transform: none; pointer-events: auto; overflow-y: auto; }
+  @media (prefers-reduced-motion: reduce) {
+    #ambient { animation: none; }
+    .slide { transition: opacity 0.25s linear; transform: none !important; }
+    .cursor::after { animation: none !important; }
+  }
+
+  .kicker { font-family: var(--font-mono); font-size: 13px; color: var(--accent); letter-spacing: 0.14em; text-transform: uppercase; margin: 0 0 18px; }
+  .kicker::before { content: "// "; color: var(--muted-dim); }
+  h1.big { font-family: var(--font-display); font-weight: 600; font-size: clamp(26px, 3.6vw, 48px); line-height: 1.14; margin: 0; text-wrap: balance; max-width: 22ch; }
+  .lede { font-size: 15.5px; color: var(--muted); max-width: 64ch; margin-top: 16px; line-height: 1.55; }
+  .lede code, .cell code { font-family: var(--font-mono); font-size: 0.9em; color: var(--ink); }
+  .cursor::after { content: "_"; color: var(--accent); animation: blink 1s step-end infinite; margin-left: 4px; }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  .term { border: 1px solid var(--line); border-radius: 10px; background: var(--surface2); padding: 20px 24px; font-family: var(--font-mono); font-size: 13.5px; line-height: 1.7; color: var(--muted); overflow-x: auto; max-width: 760px; white-space: pre; }
+  .term .ok { color: var(--accent); }
+  .term .ink { color: var(--ink); }
+  .term .gate { color: var(--gate); }
+  .term .err { color: var(--danger); font-weight: 700; }
+  .term .dim { color: var(--muted-dim); }
+
+  .row { display: flex; gap: 18px; flex-wrap: wrap; }
+  .row > * { min-width: 0; }
+
+  .chip { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 22px 24px; font-family: var(--font-display); font-weight: 600; font-size: 22px; color: var(--accent); text-align: center; flex: 1 1 160px; }
+  .chip small { display: block; font-family: var(--font-mono); font-weight: 400; font-size: 11.5px; color: var(--muted); margin-top: 6px; }
+
+  .flow { display: flex; align-items: stretch; gap: 6px; flex-wrap: wrap; }
+  .flowbox { flex: 1 1 120px; border-radius: 10px; padding: 16px 14px; text-align: center; font-family: var(--font-display); font-weight: 600; font-size: 17px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+  .flowbox small { display: block; font-family: var(--font-mono); font-weight: 400; font-size: 11px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+  .flowbox.on { background: var(--accent-dim); border-color: var(--accent); }
+  .flowbox.gate { background: var(--gate-dim); border-color: var(--gate); color: var(--gate); }
+  .arrow { display: flex; align-items: center; color: var(--muted-dim); font-size: 18px; }
+
+  .grid { display: grid; gap: 10px; }
+  .grid.rules { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 1000px) { .grid.rules { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 760px) { .grid.rules, .grid.three, .grid.two { grid-template-columns: minmax(0, 1fr); } }
+  .cell { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+  .cell .n { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+  .cell .t { font-weight: 600; font-size: 14px; margin-top: 4px; color: var(--ink); }
+  .cell .d { font-size: 12.5px; color: var(--muted); margin-top: 4px; line-height: 1.45; }
+  .cell.hot { border-color: var(--accent); background: var(--accent-dim); }
+
+  .perm h3 { font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; margin: 0 0 10px; }
+  .perm ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+  .perm li { font-family: var(--font-mono); font-size: 12.5px; color: var(--ink); background: var(--surface2); border-radius: 5px; padding: 6px 9px; overflow-wrap: anywhere; }
+  .perm.allow h3 { color: var(--accent); }
+  .perm.ask h3 { color: var(--gate); }
+  .perm.deny h3 { color: var(--danger); }
+  .perm p { font-size: 12.5px; color: var(--muted); margin: 10px 0 0; line-height: 1.45; }
+
+  .stat-card { background: var(--surface2); border-radius: 10px; padding: 18px 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1 1 130px; }
+  .stat-card .n { font-family: var(--font-mono); font-weight: 700; color: var(--accent); font-size: 34px; font-variant-numeric: tabular-nums; }
+  .stat-card .l { color: var(--muted); font-size: 12px; text-align: center; margin-top: 4px; line-height: 1.4; }
+
+  .layers { display: flex; flex-direction: column; gap: 8px; max-width: 760px; }
+  .layer { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 14px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 11px 16px; }
+  .layer .n { font-family: var(--font-mono); color: var(--muted-dim); font-size: 12px; }
+  .layer .t { font-weight: 600; font-size: 14.5px; }
+  .layer .t span { display: block; font-weight: 400; font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .tag { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; padding: 4px 8px; border-radius: 4px; white-space: nowrap; }
+  .tag.soft { color: var(--muted); background: var(--surface2); }
+  .tag.hard { color: var(--ground); background: var(--accent); }
+  .tag.human { color: var(--ground); background: var(--gate); }
+
+  .ladder { display: flex; align-items: flex-end; gap: 8px; height: 240px; max-width: 760px; }
+  .rung { flex: 1; background: var(--surface); border: 1px solid var(--line); border-radius: 6px 6px 0 0; padding: 10px; display: flex; flex-direction: column; justify-content: flex-end; min-width: 0; }
+  .rung .n { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+  .rung .t { font-size: 12.5px; font-weight: 600; margin-top: 4px; }
+  .rung.base { background: var(--accent-dim); border-color: var(--accent); }
+  .rung .c { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
+  .rung .c b { color: var(--gate); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .steps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px; }
+  @media (max-width: 760px) { .steps { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .step { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px; transition: background 0.4s ease, border-color 0.4s ease, transform 0.4s ease; }
+  .step .n { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted-dim); }
+  .step .t { font-weight: 600; font-size: 13.5px; margin-top: 7px; color: var(--muted); }
+  .step.is-gate .n::after { content: " · owner"; color: var(--gate); }
+  .step.lit { background: var(--accent-dim); border-color: var(--accent); transform: translateY(-2px); }
+  .step.lit.is-gate { background: var(--gate-dim); border-color: var(--gate); }
+  .step.lit .n { color: var(--accent); }
+  .step.lit .t { color: var(--ink); }
+  .step.now { box-shadow: 0 0 0 2px var(--accent); }
+
+  .rule-num { font-family: var(--font-mono); color: var(--accent); font-size: 14px; margin-bottom: 12px; }
+  .rule-num::before { content: "RULE_"; color: var(--muted-dim); }
+
+  .badge { align-self: flex-start; display: inline-block; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; color: var(--accent); background: var(--accent-dim); border-radius: 5px; padding: 5px 10px; margin-bottom: 18px; text-transform: uppercase; }
+  .badge.warn { color: var(--gate); background: var(--gate-dim); }
+
+  .center { text-align: center; align-items: center; }
+  .center h1.big, .center .lede { margin-left: auto; margin-right: auto; }
+
+  .title-card { display: flex; flex-direction: column; justify-content: space-between; min-height: 100%; gap: 24px; padding-bottom: 28px; }
+  .title-card .top-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+  .title-card .live-tag { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ground); background: var(--accent); padding: 5px 12px; border-radius: 20px; font-weight: 700; }
+  .title-card h1.big { font-size: clamp(38px, 5.6vw, 72px); max-width: 15ch; }
+  .title-card .sub { font-family: var(--font-display); font-style: italic; font-size: clamp(18px, 2.2vw, 26px); color: var(--muted); margin-top: 14px; }
+  .title-card .bottom-row { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; flex-wrap: wrap; }
+  .title-card .byline { font-family: var(--font-mono); min-width: 0; }
+  .title-card .byline .name { color: var(--ink); font-weight: 700; font-size: 15px; }
+  .title-card .byline .cred { color: var(--muted); display: block; font-size: 11.5px; margin-top: 5px; line-height: 1.6; }
+  .title-card .stats { display: flex; gap: 26px; }
+  .title-card .stat-mini { text-align: right; }
+  .title-card .stat-mini .n { font-family: var(--font-mono); font-weight: 700; color: var(--accent); font-size: clamp(20px, 2.2vw, 28px); line-height: 1; }
+  .title-card .stat-mini .n.g { color: var(--gate); }
+  .title-card .stat-mini .l { font-size: 10px; color: var(--muted-dim); text-transform: uppercase; letter-spacing: 0.06em; margin-top: 4px; white-space: nowrap; }
+
+  #script {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    height: calc(var(--script-h) + env(safe-area-inset-bottom, 0px));
+    background: var(--strip); border-top: 1px solid var(--line);
+    padding-block: 16px calc(16px + env(safe-area-inset-bottom, 0px));
+    padding-left: max(var(--pad-x), env(safe-area-inset-left, 0px));
+    padding-right: max(var(--pad-x), env(safe-area-inset-right, 0px));
+    display: flex; flex-direction: column; gap: 8px; transition: transform 0.3s ease;
+  }
+  body.script-hidden #script { transform: translateY(100%); }
+  #script .head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.12em; color: var(--accent); text-transform: uppercase; }
+  #script .head .dim { color: var(--muted-dim); letter-spacing: 0; text-transform: none; }
+  #script-text { font-family: var(--font-mono); font-size: 14px; color: var(--ink); line-height: 1.55; overflow-y: auto; flex: 1; min-height: 0; }
+  #script-text b.cue { color: var(--accent); }
+  #script-text i.term-def { color: var(--gate); font-style: normal; }
+</style>
+
+<div id="ambient"></div>
+<div id="progress"></div>
+<div id="section-tag"></div>
+<div id="demo-pill" hidden>Live demo — one feature, /feature to main</div>
+<div id="deck"></div>
+<div id="counter"></div>
+<div id="hint">← → navigate · N hide script · F fullscreen · Home/End jump</div>
+<div id="script">
+  <div class="head"><span>Script</span><span class="dim">What to say on this slide. Amber words are engineering terms to land. Press N to hide.</span></div>
+  <div id="script-text"></div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  function kicker(t) { return '<div class="kicker">' + t + '</div>'; }
+  function cell(n, t, d, hot) {
+    return '<div class="cell' + (hot ? ' hot' : '') + '"><div class="n">' + n + '</div><div class="t">' + t + '</div>' +
+      (d ? '<div class="d">' + d + '</div>' : '') + '</div>';
+  }
+
+  // The pipeline from the agent pipeline kit. Gates are the only owner steps.
+  var PIPE = [
+    { t: "/feature — the idea" },
+    { t: "po: design, mockups, scenarios" },
+    { t: "GATE 1: approve the design", gate: true },
+    { t: "code: build, open PR → staging" },
+    { t: "qa + reviewer (cold)" },
+    { t: "Merge to staging" },
+    { t: "GATE 2: UAT on staging", gate: true },
+    { t: "Promotion PR → main" }
+  ];
+
+  function stepsRender() {
+    var lit = this.lit || 0, now = this.now;
+    var html = kicker("the pipeline — live") + '<div class="steps">';
+    for (var i = 0; i < PIPE.length; i++) {
+      var cls = "step" + (PIPE[i].gate ? " is-gate" : "") + (now === i ? " now" : "");
+      html += '<div class="' + cls + '"><div class="n">' + (i + 1) + '</div><div class="t">' + PIPE[i].t + '</div></div>';
+    }
+    return html + '</div>' + (this.lede ? '<div class="lede">' + this.lede + '</div>' : '');
+  }
+
+  // Notes: [CUES] render green; {terms} render amber as vocabulary to land.
+  var SLIDES = [
+    { section: "Title",
+      note: "[Before house lights] Welcome in. [Once live] Tonight is about three things. One shared rulebook that every AI coding session reads. One pipeline that takes a feature from an idea to production. And the gates that make sure nothing unsafe reaches real users. I am going to show you the actual files.",
+      render: function () {
+        return '<div class="title-card">' +
+          '<div class="top-row">' + kicker("virtual talk") + '<div class="live-tag">real files, on screen</div></div>' +
+          '<div><h1 class="big">The <span style="color:var(--accent)">Harness</span></h1>' +
+          '<div class="sub">Shared rules, one pipeline, and how AI-written code ships safely</div>' +
+          '<div class="term" style="margin-top:18px">' +
+          '<span class="ok">$</span> <span class="ink">git clone github.com/gwincode/Gwin_Shared</span>\n' +
+          '<span class="dim"># one repo of rules · every project imports it · nothing ships without two human gates</span></div></div>' +
+          '<div class="bottom-row">' +
+          '<div class="byline"><span class="name">Michael Gwin</span>' +
+          '<span class="cred">Founder, Preference+ · Founder, MyLifeHealth<br>Director, AI Transformation &amp; Forward Deployed Engineering</span></div>' +
+          '<div class="stats">' +
+          '<div class="stat-mini"><div class="n">12</div><div class="l">shared rules</div></div>' +
+          '<div class="stat-mini"><div class="n">4</div><div class="l">pipeline agents</div></div>' +
+          '<div class="stat-mini"><div class="n g">2</div><div class="l">human gates</div></div>' +
+          '</div></div></div>';
+      } },
+
+    { section: "Cold Open",
+      note: "Every project I work on starts with these three lines in its CLAUDE.md. [SLOW] Before any AI session writes a line of code, it reads twelve rules from one shared repo. Same rules on my laptop, in a cloud session, on a teammate's machine. This is the {configuration as code} idea: the rules are versioned files, not a prompt someone remembers to paste.",
+      render: function () {
+        return kicker("first lines of every project") +
+          '<div class="term"><span class="ok">$</span> <span class="ink">head -3 CLAUDE.md</span>\n' +
+          '<span class="dim">&lt;!-- gwin-shared:start --&gt;</span>\n' +
+          '<span class="ink">@.claude/gwin-shared/RULES.md</span>\n' +
+          '<span class="dim">&lt;!-- gwin-shared:end --&gt;</span></div>' +
+          '<h1 class="big" style="margin-top:22px">Every session reads the same rules first.<span class="cursor"></span></h1>' +
+          '<div class="lede">Rules that live in one chat die with that chat. Rules that live in git travel with the code.</div>';
+      } },
+
+    { section: "Cold Open",
+      note: "You have seen vibe coding. You describe a thing, the AI builds it, it feels like magic for about four days. Then day five. [PAUSE] The AI did not get worse. There were no standards, so it got you to the collapse faster. Hands up, or type a 1 in chat: have you pushed code you did not fully understand to something real?",
+      render: function () {
+        return '<div class="badge">ASK 1</div><h1 class="big">Have you ever pushed code you didn’t fully understand to something real?<span class="cursor"></span></h1>' +
+          '<div class="lede">Magic for four days, then collapse. That is not an AI problem. It is a no-standards problem.</div>';
+      } },
+
+    { section: "Promise",
+      note: "The whole talk in one sentence: [SLOW] you do not need to be an engineer to ship like one. You need a harness that makes the AI follow engineering standards. Three parts. The rules. The pipeline. The gates that deliver code safely.",
+      render: function () {
+        return '<div class="center" style="display:flex;flex-direction:column">' +
+          '<h1 class="big" style="max-width:18ch">You don’t need to be an engineer to ship like one.</h1>' +
+          '<div class="lede">You need a harness. It has three parts.</div></div>' +
+          '<div class="row" style="margin-top:26px">' +
+          '<div class="chip">Rules<small>Gwin_Shared · 12 files</small></div>' +
+          '<div class="chip">Pipeline<small>po · code · qa · reviewer</small></div>' +
+          '<div class="chip">Safe delivery<small>staging · gates · protection</small></div></div>';
+      } },
+
+    // ---- Section 1: shared rules ----------------------------------------
+    { section: "Part 1 — Shared rules",
+      note: "Gwin_Shared is one repository. It is not an app. It holds configuration for AI coding tools: the rules, skills, agents, hooks, slash commands, MCP configs and scripts. The important folder is instructions: that is the rulebook. One rule of the repo itself: [SLOW] edit rules here, never in a project's copy. That is a {single source of truth}.",
+      render: function () {
+        return kicker("gwin_shared — one repo, one source of truth") +
+          '<div class="grid rules">' +
+          cell("instructions/", "The rules", "RULES.md + 12 rule files. Copied into projects.", true) +
+          cell("scripts/", "Installers", "gwinrules, install, sandbox test. .sh and .ps1.") +
+          cell("agents/ · commands/", "Personal extras", "Linked into ~/.claude by install.") +
+          cell("skills/ · hooks/", "Behaviours", "Skills and hook snippets.") +
+          cell("mcp/", "Connector configs", "Examples only. No secrets, ever.") +
+          cell("plugins/", "Vendored plugins", "e.g. the token status line.") +
+          cell("INSTALL-PROMPT.md", "One-shot install", "Rules + pipeline in one paste.") +
+          cell("HANDOFF.md", "Live state", "Where the last session stopped.") +
+          '</div><div class="lede">Edit a rule here, never in a project’s copy. A project overrides a rule only by saying so in its own <code>CLAUDE.md</code>.</div>';
+      } },
+
+    { section: "Part 1 — Shared rules",
+      note: "How do rules get into a project? A script called gwinrules. It previews by default and writes nothing. With apply, it copies the rule files into the project, stamps each copy with the source commit and a content hash, and adds one marked block to CLAUDE.md. It never commits. You review it and commit it. [SLOW] Then cloud sessions get the rules from GitHub. If the folder has no GitHub remote, it warns LOCAL ONLY. Note it is {idempotent}: re-run it after the rules change and it only updates what changed.",
+      render: function () {
+        return kicker("how rules reach a project — gwinrules") +
+          '<div class="flow">' +
+          '<div class="flowbox">Gwin_Shared<small>instructions/*.md</small></div><div class="arrow">→</div>' +
+          '<div class="flowbox">Preview<small>default · writes nothing</small></div><div class="arrow">→</div>' +
+          '<div class="flowbox">--apply<small>copy to .claude/gwin-shared/<br>stamp commit + sha256</small></div><div class="arrow">→</div>' +
+          '<div class="flowbox">CLAUDE.md<small>one marked import block</small></div><div class="arrow">→</div>' +
+          '<div class="flowbox on">You commit<small>cloud sessions read it from GitHub</small></div>' +
+          '</div>' +
+          '<div class="term" style="margin-top:20px"><span class="dim">&lt;!-- gwin-shared: file=01-verification.md source=&lt;commit&gt; sha256=&lt;12 hex&gt; |</span>\n<span class="dim">     Managed by gwinrules: edit in Gwin_Shared and re-run, not here. --&gt;</span></div>' +
+          '<div class="lede">Hand-edited copies are left alone unless you pass <code>--force</code>. No GitHub remote means a loud LOCAL ONLY warning.</div>';
+      } },
+
+    { section: "Part 1 — Shared rules",
+      note: "Here are all twelve. I will not read them. Notice what they are about: evidence, branches, handoffs, secrets, pull requests, model choice, cleanup, tests, tool limits, writing style. [SLOW] Not one of them is about how to write a React component. They are about process. The AI already knows how to code. It does not know your team's standards.",
+      render: function () {
+        return kicker("the twelve rules — instructions/RULES.md") +
+          '<div class="grid rules">' +
+          cell("01", "Verify evidence, not reports", "A “done” is a claim until you check the artifact.", true) +
+          cell("02", "Branching and release", "Staging first. Author never merges. main is owner-only.", true) +
+          cell("03", "HANDOFF.md", "Read first, rewrite last. Open state only.") +
+          cell("04", "Secrets and data", "Never commit, read or paste a secret.", true) +
+          cell("05", "PR checklist", "Version, notes, scenarios, verbatim test counts.") +
+          cell("06", "Model routing", "Raise effort before you raise the tier.") +
+          cell("07", "Branch cleanup", "Delete on merge. Protect staging and main.") +
+          cell("08", "Handoff style", "End with what happens next.") +
+          cell("09", "Context economy", "Search before reading. Batch calls.") +
+          cell("10", "Test-suite hygiene", "Tear down in finally. Shared fixtures stay.") +
+          cell("11", "Connector limits", "Know what the GitHub connector can’t do.") +
+          cell("12", "ASD-STE100 writing", "Short sentences. One instruction each.") +
+          '</div>';
+      } },
+
+    { section: "Part 1 — Shared rules",
+      note: "Rule one is the most important one. [SLOW] Treat every done, passed or fixed as a claim. That includes a subagent's report, a PR body, and the AI's own earlier turn. Check the artifact: the file, the CI log, the live page. And test counts are copied verbatim from the runner, never estimated. In engineering this is called {trust but verify}, and the counts rule kills the most common AI failure: a confident summary of a test run that never happened.",
+      render: function () {
+        return '<div class="rule-num">01</div><h1 class="big">Verify evidence, not reports.</h1>' +
+          '<div class="grid two" style="margin-top:22px;max-width:820px">' +
+          '<div class="term"><span class="err">claim</span>\n<span class="ink">“All tests pass. Fixed.”</span>\n<span class="dim">— a subagent, a PR body,\n  or the AI’s own last turn</span></div>' +
+          '<div class="term"><span class="ok">evidence</span>\n<span class="ink">auth.spec   PASS 14  FAIL 0</span>\n<span class="ink">feed.spec   PASS 25  FAIL 0</span>\n<span class="dim">— verbatim, from the runner log</span></div>' +
+          '</div><div class="lede">One CI trigger per commit. Re-run a red build once at most. A flaky-looking failure counts as a failure.</div>';
+      } },
+
+    { section: "Part 1 — Shared rules",
+      note: "Rule two is the delivery rule, and the rest of the talk hangs on it. Every change goes through a pull request, even docs. Branch off staging, PR into staging. [SLOW] The author never merges. A fresh context that did not write the diff re-verifies it, and its prompt says return a verdict, never merge. Release to main is owner-only, after the owner tests staging. Engineers call this {separation of duties}, the same idea as two signatures on a cheque.",
+      render: function () {
+        return '<div class="rule-num">02</div><h1 class="big">The author never merges.</h1>' +
+          '<div class="grid three" style="margin-top:22px">' +
+          cell("every change", "Through a pull request", "Docs-only and agent-driven changes too. The PR is the record.") +
+          cell("before staging", "Fresh-context review", "Re-runs tests, probes edge cases. Returns a verdict, never merges.", true) +
+          cell("before main", "Owner-only release", "After the owner tests on staging. No exceptions.") +
+          '</div><div class="lede">Never force-push <code>main</code> or <code>staging</code>. Production migrations, deletes and payments are owner-only too.</div>';
+      } },
+
+    { section: "Part 1 — Shared rules",
+      note: "Rule four. Secrets live in gitignored .env files. The AI is denied from even reading them, in settings.json. A .env.example with placeholders gets committed instead. And one rule that catches real bugs: anything with a NEXT_PUBLIC or VITE prefix ships to users' phones, so a server key never gets one. Last line: enforce access control in the database or server, never only in the client. That is {least privilege} plus {defense in depth}.",
+      render: function () {
+        return '<div class="rule-num">04</div><h1 class="big">Secrets never enter the conversation.</h1>' +
+          '<div class="grid three" style="margin-top:22px">' +
+          cell(".gitignore", ".env, .env.local", "Never committed. A .env.example has placeholders.") +
+          cell("settings.json → deny", "Read(./.env)", "The AI can’t open the file, so it can’t leak it.", true) +
+          cell("client prefixes", "NEXT_PUBLIC_ · VITE_", "These ship to users’ devices. Never on a server key.") +
+          '</div><div class="lede">If a step seems to need a secret, the AI stops and asks the owner to do that step.</div>';
+      } },
+
+    { section: "Part 1 — Shared rules",
+      note: "Rules are instructions. A rule only fires if Claude loads it and the branch, file or tool it names exists. A rule that says staging first does nothing in a repo with no staging branch. So gwinrules has a check mode. It writes nothing and reports PASS, FIX, BLOCKED or ASK for each dependency, and exits 1 if anything is not PASS. [SLOW] It is a {preflight check}, like a pilot's checklist.",
+      render: function () {
+        return kicker("can every rule fire? — gwinrules --check") +
+          '<div class="term"><span class="ok">$</span> <span class="ink">gwinrules.sh --check</span>\n' +
+          '  <span class="ok">PASS</span>     rules: CLAUDE.md imports RULES.md\n' +
+          '  <span class="ok">PASS</span>     rules: committed\n' +
+          '  <span class="gate">BLOCKED</span>  branches: staging exists on origin (rules 02, 07)\n' +
+          '           <span class="dim">Create it from main, push it, protect it.</span>\n' +
+          '  <span class="ok">PASS</span>     handoff: has a Last updated date\n' +
+          '  <span class="err">FIX</span>      secrets: settings.json denies reading .env\n' +
+          '  <span class="gate">ASK</span>      release notes: version source found</div>' +
+          '<div class="lede">Example output. Read-only: it reports and exits 1. A human fixes each line.</div>';
+      } },
+
+    // ---- Section 2: the pipeline ----------------------------------------
+    { section: "Part 2 — The pipeline",
+      note: "The rules say what good looks like. The pipeline kit says who does what. It is a set of Markdown and JSON files you copy into a repo. Nothing to install or run. The main Claude Code session is the orchestrator. Four subagents do the work. And the owner, me, signs off at exactly two points.",
+      render: function () {
+        return kicker("the pipeline in one picture") +
+          '<div class="flow">' +
+          '<div class="flowbox">/feature</div><div class="arrow">→</div>' +
+          '<div class="flowbox">po<small>design</small></div><div class="arrow">→</div>' +
+          '<div class="flowbox gate">GATE 1<small>approve design</small></div><div class="arrow">→</div>' +
+          '<div class="flowbox">code<small>PR → staging</small></div><div class="arrow">→</div>' +
+          '<div class="flowbox">qa + reviewer</div><div class="arrow">→</div>' +
+          '<div class="flowbox on">staging</div><div class="arrow">→</div>' +
+          '<div class="flowbox gate">GATE 2<small>owner UAT</small></div><div class="arrow">→</div>' +
+          '<div class="flowbox on">main</div></div>' +
+          '<div class="lede">Amber is the owner. Everything between the two gates runs on its own, inside fixed caps.</div>';
+      } },
+
+    { section: "Part 2 — The pipeline",
+      note: "Four agents, each with one job. po is the product owner: it researches, writes the design doc, HTML mockups, regression scenarios, and the prompt for code. code builds it and opens the PR. qa tests the PR preview in a browser and posts evidence. reviewer reads the diff cold, with no write tools at all, and returns APPROVE or BLOCK. [SLOW] The orchestrator checks their evidence and merges. None of them merges its own work.",
+      render: function () {
+        return kicker("who does what") +
+          '<div class="grid three">' +
+          cell("orchestrator", "Main session", "Runs the agents, verifies artifacts, merges.") +
+          cell("po · advanced tier, high effort", "Product owner", "Design doc, mockups, scenarios, code prompt.") +
+          cell("code · standard, medium", "Engineer", "Branch off staging, build to the mockups, open PR.") +
+          cell("qa · standard, medium", "Tester", "Suites + browser on the PR preview. Evidence in qa/&lt;n&gt;/.") +
+          cell("reviewer · read-only", "Cold reviewer", "Reads the diff with no memory of writing it. APPROVE or BLOCK.", true) +
+          cell("owner", "You", "GATE 1: the design. GATE 2: click through staging.") +
+          '</div>';
+      } },
+
+    { section: "Part 2 — The pipeline",
+      note: "Which model runs each agent? Rule six. Three tiers: standard, advanced, frontier. [SLOW] Raise effort before you raise the tier, because more thinking time is cheaper than a bigger model. Routine work stays on step one. A planning agent like po may start at step three, because planning is where mistakes cost the most. Projects pin full model IDs, so a new release can't change behavior silently. That is {version pinning}. Now look at the cost line: the estimated average cost of one completed task. About a dollar fifty at the default, about nine dollars at the top. [SLOW] Step one to step two adds about seventy-five cents. A jump to the advanced tier adds about three dollars. That is why the ladder raises effort first. Judge spend by {cost per completed task}, not cost per request. These are estimates. Use your own logs.",
+      render: function () {
+        return '<div class="rule-num">06</div><h1 class="big" style="font-size:clamp(24px,3vw,38px)">Raise effort before you raise the tier.</h1>' +
+          '<div class="ladder" style="margin-top:22px">' +
+          '<div class="rung base" style="height:36%"><div class="n">1 · default</div><div class="t">Standard · medium</div><div class="c">Sonnet · <b>~$1.50</b></div></div>' +
+          '<div class="rung" style="height:50%"><div class="n">2</div><div class="t">Standard · high</div><div class="c">Sonnet · <b>~$2.25</b></div></div>' +
+          '<div class="rung" style="height:66%"><div class="n">3 · po starts here</div><div class="t">Advanced · high</div><div class="c">Opus · <b>~$4.50</b></div></div>' +
+          '<div class="rung" style="height:82%"><div class="n">4</div><div class="t">Advanced · xhigh</div><div class="c">Opus · <b>~$6.75</b></div></div>' +
+          '<div class="rung" style="height:100%"><div class="n">5 · rare</div><div class="t">Frontier</div><div class="c">Fable · <b>~$9.00</b></div></div>' +
+          '</div><div class="lede">Estimated average cost per completed task. Assumes about 500K input and 50K output tokens at medium effort, about 50% more tokens per effort step, and no caching. List prices, Anthropic API, Nov 2026. Replace with numbers from your own logs.</div>';
+      } },
+
+    { section: "Part 2 — The pipeline",
+      note: "Autonomy needs limits. Two fix attempts per PR. Two UAT cycles per feature. A checkpoint every ten agent calls, and a hard stop at thirty. Any agent stops itself after about forty tool calls with no result. The same failure twice means stop and ask. [SLOW] These are {circuit breakers}: they stop a loop from burning money and time while nobody watches.",
+      render: function () {
+        return kicker("caps — autonomy inside a fence") +
+          '<div class="row">' +
+          '<div class="stat-card"><div class="n">2</div><div class="l">fix attempts<br>per PR</div></div>' +
+          '<div class="stat-card"><div class="n">2</div><div class="l">UAT cycles<br>per feature</div></div>' +
+          '<div class="stat-card"><div class="n">10</div><div class="l">agent calls<br>per checkpoint</div></div>' +
+          '<div class="stat-card"><div class="n">30</div><div class="l">agent calls<br>hard stop</div></div>' +
+          '<div class="stat-card"><div class="n">~40</div><div class="l">tool calls with no<br>result → blocked</div></div>' +
+          '</div><div class="lede">Same failure twice, scope growth, or a cap hit: the work goes to the owner, batched, not one question at a time.</div>';
+      } },
+
+    { section: "Part 2 — The pipeline",
+      note: "Where does state live between sessions? In HANDOFF.md, rule three. Each feature has a heading with its state and a loop ledger under it. The orchestrator updates it on every transition, so the caps survive a closed laptop. [SLOW] It holds open state only. Once a feature ships and production is verified, the entry is deleted. The PR, changelog and design doc are the permanent record.",
+      render: function () {
+        return kicker("state that survives sessions — HANDOFF.md") +
+          '<div class="term"><span class="ink">## Saved searches — InReview</span>\n' +
+          '<span class="ok">Loops:</span> fix 1/2 · uat 0/2 · agents 6/30 · po-bounce 1/1\n\n' +
+          '<span class="dim">Designing → AwaitingDesignApproval → Building → InReview</span>\n' +
+          '<span class="dim">→ OnStaging → AwaitingOwnerUAT → Promoting → Shipped</span> <span class="ok">(entry deleted)</span></div>' +
+          '<div class="lede">Example entry. Read first, rewrite last, about 250 lines at most. An optional CI check fails a PR whose handoff is stale.</div>';
+      } },
+
+    { section: "Part 2 — The pipeline", demo: true, lit: 0, now: 0, render: stepsRender,
+      lede: "Live: the top idea on the board, typed into /feature with its musts and must-nots.",
+      note: "Let me show one real feature going around the loop. I type /feature with the idea, the musts, the must-nots, and the size. [DEMO: run /feature live] po is now researching and drawing mockups." },
+
+    { section: "Part 2 — The pipeline", demo: true, lit: 3, now: 2, render: stepsRender,
+      lede: "GATE 1: I approve the design, the mockups, and the regression scenarios. Then I step away.",
+      note: "po is back. Here are the mockups and the design summary. This is my first gate. [SLOW] I decide what done means, before any code exists. That is cheap. Changing a mockup costs a sentence. Changing shipped code costs a PR. [DEMO: approve]" },
+
+    { section: "Part 2 — The pipeline", demo: true,
+      note: "code opened a PR. Now two agents run in parallel. qa tests the preview. reviewer reads the diff cold. Then the orchestrator checks the artifacts, not the agents' words: CI green, the review visible on the PR, qa evidence in the folder. [SLOW] Author is not equal to promoter.",
+      render: function () {
+        return '<div class="center" style="display:flex;flex-direction:column"><h1 class="big" style="color:var(--accent)">Author ≠ Promoter</h1>' +
+          '<div class="lede">Steps 4–5. The reviewer has never seen the code before. It has no write tools. Its verdict goes on the PR, where anyone can read it.</div></div>';
+      } },
+
+    { section: "Part 2 — The pipeline", demo: true,
+      note: "It merged to staging and the staging deploy is ready. The orchestrator wrote me a UAT checklist from the scenarios and mockups, with a URL per screen. Then it stops. Nothing moves toward main until I say so. You have seen what I have seen. Ship it, or send it back? A or B. [PAUSE — get a read from the room]",
+      render: function () {
+        return '<div class="badge warn">ASK 2 — GATE 2</div><h1 class="big">Ship it (A) or send it back (B)?<span class="cursor"></span></h1>' +
+          '<div class="lede">Step 7, live. I just clicked through staging the way a user would.</div>';
+      } },
+
+    { section: "Part 2 — The pipeline", demo: true, lit: 8, render: stepsRender,
+      lede: "Promotion PR, fresh reviewer, CI green, merge to main, production smoke check. The idea flips to shipped.",
+      note: "UAT approved. The orchestrator opens a promotion PR from staging to main. A fresh reviewer checks it again. It merges, confirms the production deploy, and runs a smoke check. That is the loop." },
+
+    // ---- Section 3: safe delivery ---------------------------------------
+    { section: "Part 3 — Safe delivery",
+      note: "Now the question this audience cares about most. What actually stops bad code reaching production? Not one thing. Five layers. [SLOW] Notice the labels. The first two are soft: they guide, but a script can route around them. Branch protection is hard: GitHub enforces it. And the last layer is a human. That is {defense in depth}: no single layer has to be perfect.",
+      render: function () {
+        return kicker("five layers between an AI and production") +
+          '<div class="layers">' +
+          '<div class="layer"><div class="n">L1</div><div class="t">Rules in CLAUDE.md<span>The shared rules, loaded into every session.</span></div><div class="tag soft">advisory</div></div>' +
+          '<div class="layer"><div class="n">L2</div><div class="t">Permissions in settings.json<span>Allow, ask, deny — matched on command text.</span></div><div class="tag soft">seatbelt</div></div>' +
+          '<div class="layer"><div class="n">L3</div><div class="t">Process gates<span>Author never merges. Cold review. Verify artifacts.</span></div><div class="tag soft">convention</div></div>' +
+          '<div class="layer"><div class="n">L4</div><div class="t">Branch protection on GitHub<span>No force-push, no deletion, required checks.</span></div><div class="tag hard">enforced</div></div>' +
+          '<div class="layer"><div class="n">L5</div><div class="t">Owner UAT on staging — GATE 2<span>A human clicks through before real users do.</span></div><div class="tag human">human</div></div>' +
+          '</div>';
+      } },
+
+    { section: "Part 3 — Safe delivery",
+      note: "Layer two, the permission file. Three lists. Allow runs with no prompt: reading, committing, opening a PR. Ask always prompts a human: every push, every merge, anything that publishes or runs arbitrary code. Deny is blocked outright: force-push, push to main, rm -rf. [SLOW] The default is that no project build or test command is allowed until you approve it after a risk scan. That is {least privilege}.",
+      render: function () {
+        return kicker("layer 2 — .claude/settings.json") +
+          '<div class="grid three">' +
+          '<div class="cell perm allow"><h3>allow</h3><ul><li>git commit *</li><li>git diff *</li><li>gh pr create *--head *</li><li>gh pr checks *</li></ul><p>Safe, named commands. No prompt.</p></div>' +
+          '<div class="cell perm ask"><h3>ask</h3><ul><li>git push*</li><li>gh pr merge*</li><li>gh release *</li><li>npx * · node * · curl *</li></ul><p>A human approves each one.</p></div>' +
+          '<div class="cell perm deny"><h3>deny</h3><ul><li>git push --force*</li><li>git push * main*</li><li>git push *--mirror*</li><li>rm -rf*</li></ul><p>Blocked. No prompt to click through.</p></div>' +
+          '</div>';
+      } },
+
+    { section: "Part 3 — Safe delivery",
+      note: "I want to be honest about limits, because the kit is. The permission file matches command text. Anything that can run code, a test script, node, a browser, can get around it. [SLOW] It is a seatbelt, not a sandbox. The real controls are the process and the owner. For a hard stop, turn on branch protection on main. And settings load only when a session starts, so restart after you change them.",
+      render: function () {
+        return '<h1 class="big">The permission file is a seatbelt, not a sandbox.</h1>' +
+          '<div class="grid two" style="margin-top:22px;max-width:820px">' +
+          cell("what it does", "Removes accidents", "Stops a careless force-push or a push to main. Prompts on every push.") +
+          cell("what it can’t do", "Stop code that runs code", "A test runner, node or a browser can do anything the project can.") +
+          '</div><div class="lede">For a real stop, protect <code>main</code> and <code>staging</code> on GitHub. The caps are conventions, not hooks. Settings load only in a new session.</div>';
+      } },
+
+    { section: "Part 3 — Safe delivery",
+      note: "Before anything merges to staging, the orchestrator checks four things, and it checks the artifacts themselves. CI is green on the PR. The reviewer's verdict is visible on the PR, not just in a chat return. qa's evidence exists in the qa folder. The handoff file is under its size limit. [SLOW] If an agent says it passed and the artifact is missing, it did not pass. This is rule one, applied to merging.",
+      render: function () {
+        return kicker("merge gates — verify artifacts, not claims") +
+          '<div class="grid two" style="max-width:820px">' +
+          cell("gate", "CI green", "Read from the PR’s checks, not from an agent’s summary.") +
+          cell("gate", "Review visible on the PR", "Body starts VERDICT: APPROVE. Posted with gh.") +
+          cell("gate", "qa evidence exists", "Scenario table + screenshots in qa/&lt;n&gt;/.") +
+          cell("gate", "Handoff under the ceiling", "State and loop ledger up to date.") +
+          '</div><div class="lede">Any gate red: resume the same <code>code</code> agent with the findings. Two failed fixes: stop and ask the owner.</div>';
+      } },
+
+    { section: "Part 3 — Safe delivery",
+      note: "Every PR runs the checklist in rule five. Bump the version, read from the real base branch, not from a design doc. Write release notes for users. Update the architecture diagram if a service or table changed. [SLOW] Write regression scenarios, get them approved, show them passing with verbatim output, and add them to the regression list. A PR that says no scenarios apply has to say why, and review challenges it.",
+      render: function () {
+        return '<div class="rule-num">05</div><h1 class="big" style="font-size:clamp(24px,3vw,38px)">Every PR carries its own proof.</h1>' +
+          '<div class="grid rules" style="margin-top:20px">' +
+          cell("1", "Version + release notes", "Semver, read from the real base branch.") +
+          cell("2", "Architecture diagram", "When a service, table or flow changes.") +
+          cell("3", "Regression scenarios", "Written, approved, passing, added to the list.", true) +
+          cell("4", "Test every PR", "Verbatim per-suite PASS/FAIL. No counts, no merge.", true) +
+          cell("5", "Design doc", "Committed in the PR. The permanent record.") +
+          cell("6", "Handoff on the PR", "What changed, results, what to check.") +
+          cell("7", "Code style", "Match the code around it. Money in integer cents.") +
+          cell("8", "Imperative commits", "“Add X”, “Fix Y”.") +
+          '</div>';
+      } },
+
+    { section: "Part 3 — Safe delivery",
+      note: "One step saved me from a bad night. Which one do you think? [PAUSE] August 25th, version 0.30. Tests passed, 25 of 25. The fresh review passed. It merged to staging. Then I did my click-through at GATE 2 and got this. The database correctly hid a removed product, and the code assumed every rating has one. Null. Crash. [SLOW] The fix shipped with a permanent regression test. Production never saw it.",
+      render: function () {
+        return kicker("v0.30 — caught at GATE 2, not in production") +
+          '<div class="term"><span class="ok">$</span> <span class="ink">GET /feed</span>\n<span class="err">This page couldn’t load</span>\n\n<span class="dim">TypeError: Cannot read properties of null (reading ‘category’)</span></div>' +
+          '<div class="lede">25/25 tests passed. Fresh review passed. It still crashed on staging, because the world was bigger than the tests. The fix and a permanent regression test shipped together.</div>';
+      } },
+
+    // ---- Section 4: apply -----------------------------------------------
+    { section: "Part 4 — Apply it",
+      note: "How do you get this into your own repo? One file: INSTALL-PROMPT.md. Paste it into Claude Code in your project. It checks the repo, previews the rules, interviews you once, installs the rules and the pipeline, runs the rule checks, and commits nothing until you say yes. Both repos are public.",
+      render: function () {
+        return kicker("install it — INSTALL-PROMPT.md, one paste") +
+          '<div class="steps">' +
+          '<div class="step lit"><div class="n">1</div><div class="t">Check the repo has a GitHub remote</div></div>' +
+          '<div class="step lit"><div class="n">2</div><div class="t">Get Gwin_Shared + the kit</div></div>' +
+          '<div class="step lit"><div class="n">3–4</div><div class="t">Preview + one set of questions</div></div>' +
+          '<div class="step lit"><div class="n">5</div><div class="t">gwinrules --apply</div></div>' +
+          '<div class="step lit"><div class="n">6</div><div class="t">Install the pipeline</div></div>' +
+          '<div class="step lit"><div class="n">6b</div><div class="t">Make every rule able to fire</div></div>' +
+          '<div class="step lit"><div class="n">6c</div><div class="t">Optional: token status line</div></div>' +
+          '<div class="step lit is-gate"><div class="n">7</div><div class="t">Report, then commit on your yes</div></div>' +
+          '</div><div class="lede">github.com/gwincode/Gwin_Shared · github.com/gwincode/gwin-claude-agent-pipeline-kit</div>';
+      } },
+
+    { section: "Part 4 — Apply it",
+      note: "You do not need twelve rules on Monday. You need three. One: staging is required. If you can't say where staging is, you don't have a harness yet.",
+      render: function () {
+        return '<div class="rule-num">A</div><h1 class="big">Staging is required, not optional.</h1>' +
+          '<div class="lede">Build the second copy of your app before your next feature. Nothing reaches production that did not run there first.</div>';
+      } },
+
+    { section: "Part 4 — Apply it",
+      note: "Two: author is not promoter. The thing that writes the code does not approve it. A fresh context is free. A second human engineer is not.",
+      render: function () {
+        return '<div class="rule-num">B</div><h1 class="big">Author ≠ promoter.</h1>' +
+          '<div class="lede">The session that writes the code opens the PR and stops. A fresh context reviews. A rule merges.</div>';
+      } },
+
+    { section: "Part 4 — Apply it",
+      note: "Three: the human owns two gates. Not the code review, the AI is better at that than me. Not the merge, a rule is more reliable than my attention. Deciding what done means, and being the user before the users are.",
+      render: function () {
+        return '<div class="rule-num">C</div><h1 class="big">The human owns two gates: the spec, and the click.</h1>' +
+          '<div class="lede">Everything else in Gwin_Shared refines these three.</div>';
+      } },
+
+    { section: "Part 4 — Apply it",
+      note: "If you built this tomorrow, for code, for content, for anything, what's the one gate you would keep for yourself? [PAUSE — co-host reads a few aloud]",
+      render: function () {
+        return '<div class="badge">ASK 3</div><h1 class="big">What’s the one gate you’d keep for yourself?<span class="cursor"></span></h1>' +
+          '<div class="lede">Notice what nobody ever hands over.</div>';
+      } },
+
+    { section: "Q&A",
+      note: "Questions. Seven minutes, then I close, so don't let me trail off.",
+      render: function () {
+        return '<div class="center" style="display:flex;flex-direction:column"><h1 class="big" style="font-size:56px">Q&amp;A</h1>' +
+          '<div class="lede">7 minutes. Hard stop before the close.</div></div>';
+      } },
+
+    { section: "Close",
+      note: "One thing to do before your next AI feature: write down where staging is. If you can't write it, you don't have a harness yet. Thanks. [Stop. Don't add “any questions?”]",
+      render: function () {
+        return '<div class="center" style="display:flex;flex-direction:column">' +
+          '<h1 class="big" style="font-size:34px">The Harness</h1>' +
+          '<div class="lede" style="font-family:var(--font-mono);font-size:12.5px">Shared rules · one pipeline · author ≠ promoter · two human gates</div>' +
+          '<div style="font-family:var(--font-display);font-weight:600;font-style:italic;color:var(--accent);font-size:20px;margin-top:24px">One action: write down where staging is.</div>' +
+          '</div>';
+      } }
+  ];
+
+  // ---- engine ------------------------------------------------------------
+  var deck = document.getElementById("deck");
+  var progress = document.getElementById("progress");
+  var counter = document.getElementById("counter");
+  var sectionTag = document.getElementById("section-tag");
+  var demoPill = document.getElementById("demo-pill");
+  var scriptText = document.getElementById("script-text");
+  var current = 0;
+
+  SLIDES.forEach(function (def) {
+    var el = document.createElement("div");
+    el.className = "slide";
+    el.innerHTML = def.render.call(def);
+    deck.appendChild(el);
+    var tick = document.createElement("div");
+    tick.className = "tick";
+    progress.appendChild(tick);
+  });
+
+  var slideEls = Array.prototype.slice.call(deck.children);
+  var tickEls = Array.prototype.slice.call(progress.children);
+
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function formatScript(note) {
+    return esc(note || "")
+      .replace(/(\[[^\]]+\])/g, '<b class="cue">$1</b>')
+      .replace(/\{([^}]+)\}/g, '<i class="term-def">$1</i>');
+  }
+
+  function show(i) {
+    if (i < 0 || i >= SLIDES.length) return;
+    current = i;
+    slideEls.forEach(function (el, idx) { el.classList.toggle("active", idx === i); });
+    tickEls.forEach(function (t, idx) {
+      t.classList.toggle("past", idx < i);
+      t.classList.toggle("current", idx === i);
+    });
+    counter.textContent = String(i + 1).padStart(2, "0") + " / " + SLIDES.length;
+    scriptText.innerHTML = formatScript(SLIDES[i].note);
+    sectionTag.textContent = SLIDES[i].section || "";
+    demoPill.hidden = !SLIDES[i].demo;
+
+    if (SLIDES[i].render === stepsRender) {
+      var steps = slideEls[i].querySelectorAll(".step");
+      var litCount = SLIDES[i].lit || 0;
+      steps.forEach(function (st, idx) {
+        st.classList.remove("lit");
+        if (idx < litCount) setTimeout(function () { st.classList.add("lit"); }, idx * 90);
+      });
+    }
+  }
+
+  function next() { show(Math.min(current + 1, SLIDES.length - 1)); }
+  function prev() { show(Math.max(current - 1, 0)); }
+
+  window.addEventListener("keydown", function (e) {
+    if (e.key === "ArrowRight" || e.key === " " || e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); next(); }
+    else if (e.key === "ArrowLeft" || e.key === "ArrowUp" || e.key === "Backspace" || e.key === "PageUp") { e.preventDefault(); prev(); }
+    else if (e.key === "Home") show(0);
+    else if (e.key === "End") show(SLIDES.length - 1);
+    else if (e.key === "n" || e.key === "N") document.body.classList.toggle("script-hidden");
+    else if (e.key === "f" || e.key === "F") {
+      try {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(function () {});
+        else document.exitFullscreen();
+      } catch (err) { /* fullscreen unavailable */ }
+    }
+  });
+
+  deck.addEventListener("click", function (e) {
+    if (e.clientX < window.innerWidth * 0.35) prev(); else next();
+  });
+
+  show(0);
+})();
+</script>

@@ -6,11 +6,11 @@ Named `HANDOFF.md` to match what `gwinrules --check` looks for.
 
 ## Current state
 
-- **Branch:** `claude/confident-davinci-yzlj39`, restarted from `main` at `fcb1da3` (PR #6 merge) for this handoff fix.
-- **PR:** [gwincode/Gwin_Shared#6](https://github.com/gwincode/Gwin_Shared/pull/6), the status line step for `INSTALL-PROMPT.md` (step 6c), is merged into `main`, with PR #4 (ASCII loader, status line install, `--loader`) and PR #5 (handoff update). This file's own fix goes in a small follow-up PR.
-- **Next change:** none queued. A merged PR is finished, so any follow-up work starts from the latest `main` on a fresh branch.
-- **Session:** `v0.4.5 / PR #6 — token status line in INSTALL-PROMPT`
-- **Also cloned (read-only, shallow):** `gwincode/gwin-claude-agent-pipeline-kit` at `/home/user/gwincode/gwin-claude-agent-pipeline-kit` (HEAD `2201746`, `main`). This session cannot push to it. Nothing has been changed there.
+- **Branch:** `claude/dreamy-pascal-f8f6ss`, from `main` at `f527d68` (PR #8 merge).
+- **PR:** [gwincode/Gwin_Shared#9](https://github.com/gwincode/Gwin_Shared/pull/9), draft into `main` (this repo has no `staging`). The session is subscribed to its activity.
+- **Next change:** owner rehearses the deck and says what to cut or change. The five live-demo slides need a real `/feature` run in a pipeline project.
+- **Session:** `v0.4.5 / PR #9 — The Harness deck (rules, pipeline, safe delivery)`
+- **Earlier PRs:** #4 to #8 are merged into `main`. Nothing from them is open.
 
 ## What's in the repo
 
@@ -21,6 +21,7 @@ Named `HANDOFF.md` to match what `gwinrules --check` looks for.
 | `scripts/` | `install.sh` / `install.ps1`: link skills, agents, commands; install the token status line; `--loader` / `-Loader` for the ASCII view | Done. Plain output unchanged (diffed against a saved baseline) |
 | `plugins/cc-token-statusline/` | Vendored from Alfafis/cc-token-statusline v0.4.5 (MIT). Only the status line scripts, plus `LICENSE` | Done |
 | `INSTALL-PROMPT.md` | Step 6c: optional personal token status line. Previews with `--dry-run`, applies only on a second yes, skipped in cloud sessions, never fails the install. Step 7 reports it. Calls the plugin installer directly | Done |
+| `docs/talks/the-harness.html` | Presenter deck (34 slides): shared rules, the pipeline kit, safe delivery. Self-contained, speaker script on screen (N hides it) | Draft. Built from the owner's earlier Preference+ deck |
 | `HANDOFF.md` | This file | Kept up to date each prompt |
 
 ## Decisions
@@ -51,6 +52,8 @@ Each was reproduced before fixing and re-tested after.
 
 ## Open items
 
+- **Deck facts to keep in sync.** The deck quotes the rule titles, the `gwinrules --check` output format, the kit's caps (2 fix, 2 UAT, checkpoint 10, hard stop 30) and sample `settings.json` lines. If those change, update the deck. The `--check` output and the `HANDOFF.md` entry on two slides are labelled as examples.
+- **Deck uses tiers, not model IDs.** The pipeline slides say "advanced tier" and "standard tier". Slide 14 shows an estimated average cost per completed task per step (~$1.50, $2.25, $4.50, $6.75, $9.00). Assumptions, stated on the slide: 500K input + 50K output tokens at medium effort, +50% tokens per effort step, no caching, list prices Nov 2026 (Sonnet $2/$10, Opus $4/$20, Fable $8/$40 per 1M). These are estimates, not measured. Replace with real numbers from logs, and re-check prices before each talk.
 - **Verify on Windows** (PowerShell 7 and Windows Terminal): `scripts\ascii-loader.ps1 -Demo`, `scripts\install.ps1 -WhatIf`, then `scripts\install.ps1 -Loader`. The PowerShell code is tested under `pwsh` on Linux only. The link loop uses junctions, which are Windows-only, so it was exercised with `-Copy` instead.
 - **The loader animation cannot show inside Claude Code.** Verified: in Claude Code's Bash tool, stdout is not a TTY, so the loader prints plain lines (the checklist and summary still work). The animation is for a human running `install --loader` in a real terminal. For an install that Claude runs (the `INSTALL-PROMPT.md` flow), Claude should report each step as it finishes instead. The `INSTALL-PROMPT.md` flow does not call the loader at all today.
 - **Loader progress is hard to see while a step runs** (found while building the demo). The overall fill bar shows only at the start and the end. During a run you see the bouncing bar and "step N of M". The `Step done` face is cleared within milliseconds by the next step, so it is never visible. Fix idea: show the overall fill next to "step N of M" in the footer.
@@ -70,3 +73,10 @@ Each was reproduced before fixing and re-tested after.
 - **Prompt 9:** Added optional step 6c (token status line) to `INSTALL-PROMPT.md`, updated step 7 to report it, and updated the "Optional" and "To update later" lines. Fixed `README.md` ("Which path": the project and own-machine bullets). Tested the exact step 6c commands in throwaway homes: dry-run, apply, rerun, uninstall, plus a case with an existing status line (chained and restored) and a path with a space. The real `~/.claude` was not touched. `test-sandbox-install.sh` passes locally; it does not read the prompt text. `gwinrules` was not changed. Closed the `INSTALL-PROMPT.md` open item. Marked PR #6 ready at the user's request, then merged it (merge commit `fcb1da3`, CI green).
 - **Prompt 10:** Fixed the stale "Current state" above (it still called PR #6 a draft). Restarted the branch from `main` because PR #6 was merged. Docs only. Merged as PR #7 (`17fdb58`).
 - **Prompt 11:** Removed the stale `/steps.txt` open item. The file was not in the current container (checked `ls /steps.txt`, not found); it came from an earlier session's container. If a copy exists on the user's own computer, they can remove it there. Docs only.
+- **Prompt 12:** Revised the owner's "The Harness" deck to present the shared rules, the pipeline and safe delivery. Read `instructions/`, `README.md`, `INSTALL-PROMPT.md`, `gwinrules.sh` and the pipeline kit (cloned read-only to the scratchpad) so every slide matches the files. Removed the Preference+ screenshot slides (no images in the repo). Kept the v0.30 catch story. Rendered it once at desktop and phone width: no horizontal overflow, no console errors.
+- **Prompt 13:** Slide 14 (model routing ladder): added the relative cost per tier (Sonnet 1x, Opus 2x, Fable 4x) and the dated list prices. Prices come from the Claude API reference cached 2026-11-03. Republished the artifact. Push still blocked (403).
+- **Prompt 14:** Slide 14 now shows dollars per completed task instead of ratios, as labelled estimates. Republished. Push still blocked (403).
+- **Prompt 15:** Installed the `cachekeeper@claude-cache` plugin (v0.3.1, marketplace `the-cybersapien/claude-cache`) into this cloud session's `~/.claude`, at user scope. Read its hook code first: no network calls, and it runs only `tail` on the session transcript. Not part of this repo, and gone when the container is reclaimed. Push still blocked (403).
+- **Prompt 16:** Wrote a paste-ready prompt to install cachekeeper for every cloud session (upload to claude.ai account plugins, plus setup scripts on each cloud environment, pinned to reviewed commit `af2b6c5`). cachekeeper is not in the Anthropic plugin directory (searched). Nothing changed in this repo except this line.
+- **Prompt 17:** Write access came back. Pushed `claude/dreamy-pascal-f8f6ss` (5 commits plus this one). Draft PR creation failed twice with "invalid session" from the GitHub connector.
+- **Prompt 18:** Opened draft PR #9 on the third try (the connector had reconnected). Subscribed to PR activity.
